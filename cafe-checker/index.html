@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>바이럴 조회수 체커 — 인사이더그램 컴퍼니</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0D0D0D;--bg2:#1e1e1e;--bg3:#2a2a2a;--border:#3a3a3a;--border2:#555;--blue:#2563EB;--blue-dark:#1d4ed8;--blue-dim:#0f1f3d;--blue-bright:#60a5fa;--text:#ffffff;--muted:#cccccc;--faint:#888888;--green:#22c55e;--green-dim:#052e16;--red:#f87171;--red-dim:#450a0a;--yellow:#fbbf24;--yellow-dim:#451a03;--purple:#a78bfa;--purple-dim:#2e1065}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;display:flex;flex-direction:column}
+#header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.header-left{display:flex;align-items:center;gap:14px}
+.back-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:transparent;font-size:12px;cursor:pointer;color:var(--muted);font-family:inherit;text-decoration:none;transition:all .15s}
+.back-btn:hover{background:var(--bg3);color:var(--text)}
+.page-title{font-size:15px;font-weight:600}
+.page-sub{font-size:12px;color:var(--faint)}
+#main{flex:1;padding:28px 32px;max-width:1200px;width:100%;margin:0 auto}
+.guide-banner{background:var(--blue-dim);border:1px solid #1e3a5f;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#93c5fd;line-height:1.7}
+.guide-banner strong{color:#fff}
+.section-label{font-size:10px;font-weight:600;color:var(--faint);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+.upload-area{background:var(--bg2);border:2px dashed var(--border2);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:24px}
+.upload-area:hover,.upload-area.drag-over{border-color:var(--blue);background:#0f1f3d}
+.upload-icon{font-size:32px;margin-bottom:10px}
+.upload-title{font-size:14px;font-weight:600;margin-bottom:6px}
+.upload-desc{font-size:12px;color:var(--muted);line-height:1.6}
+#file-input{display:none}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--bg3);color:var(--text)}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:500}
+.btn-primary:hover{background:var(--blue-dark)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-green{background:#16a34a;border-color:#16a34a;color:#fff;font-weight:500}
+.btn-green:hover{background:#15803d}
+.panel{background:var(--bg2);border:1px solid #444;border-radius:12px;overflow:hidden;margin-bottom:24px}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.panel-title{font-size:13px;font-weight:600}
+.panel-actions{display:flex;gap:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:var(--bg3)}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--bg3)}
+.empty-row td{text-align:center;color:var(--faint);padding:32px!important}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.badge-wait{background:#333;color:#bbb;border:1px solid #555}
+.badge-loading{background:var(--yellow-dim);color:var(--yellow)}
+.badge-done{background:var(--green-dim);color:var(--green)}
+.badge-restricted{background:var(--purple-dim);color:var(--purple)}
+.badge-deleted{background:#2d1b00;color:#f97316}
+.badge-error{background:var(--red-dim);color:var(--red)}
+.note-text{font-size:11px;color:var(--faint);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note-text.restricted{color:var(--purple)}
+.note-text.error{color:var(--red)}
+.progress-wrap{background:var(--bg2);border:1px solid #444;border-radius:12px;padding:18px;margin-bottom:24px;display:none}
+.progress-wrap.show{display:block}
+.progress-label{display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.progress-bar-bg{background:var(--bg3);border-radius:4px;height:6px;overflow:hidden}
+.progress-bar{background:var(--blue);height:100%;border-radius:4px;transition:width .3s;width:0%}
+.progress-status{font-size:12px;color:var(--faint);margin-top:8px}
+.ext-banner{background:#1a1a0a;border:1px solid #555520;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#fbbf24;line-height:1.7;display:none}
+.ext-banner.show{display:block}
+.add-row{display:flex;gap:8px;margin-bottom:24px}
+.add-row input{flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;transition:border-color .15s}
+.add-row input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.add-row input::placeholder{color:var(--faint)}
+.url-link{color:var(--blue-bright);text-decoration:none;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:260px}
+.url-link:hover{text-decoration:underline}
+.del-btn{background:none;border:none;color:var(--faint);cursor:pointer;padding:2px 6px;border-radius:4px;font-size:12px;transition:all .15s}
+.del-btn:hover{background:var(--red-dim);color:var(--red)}
+#toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:12px 18px;font-size:13px;display:none;z-index:200;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="header-left">
+    <a class="back-btn" href="../">← 포털 홈</a>
+    <div>
+      <div class="page-title">바이럴 조회수 체커</div>
+      <div class="page-sub">네이버 카페 게시글 조회수 · 댓글수 자동 수집</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px">
+    <button class="btn" onclick="downloadTemplate()">📥 엑셀 양식 다운로드</button>
+    <button class="btn btn-green" id="download-btn" onclick="downloadResult()" style="display:none">⬇ 결과 엑셀 저장</button>
+  </div>
+</div>
+
+<div id="main">
+
+  <div class="guide-banner">
+    <strong>📌 사용 방법</strong><br>
+    ① 엑셀 양식을 다운로드해서 <strong>카페명</strong>과 <strong>게시글 URL</strong>을 입력하세요.<br>
+    ② 작성한 엑셀 파일을 아래에 업로드하거나, URL을 직접 추가하세요.<br>
+    ③ <strong>[수집 시작]</strong> 버튼을 누르면 각 게시글의 조회수와 댓글수를 자동으로 가져옵니다.<br>
+    ④ 수집 완료 후 <strong>[결과 엑셀 저장]</strong>으로 다운로드하세요.
+  </div>
+
+  <div class="ext-banner" id="ext-banner">
+    ⚠️ <strong>Chrome 확장 프로그램이 필요합니다.</strong><br>
+    네이버 카페는 로그인 상태에서만 조회수를 볼 수 있어요. 확장 프로그램을 먼저 설치하고 Chrome에서 네이버에 로그인해주세요.
+  </div>
+
+  <div class="section-label">엑셀 업로드</div>
+  <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+    <div class="upload-icon">📂</div>
+    <div class="upload-title">엑셀 파일을 여기에 끌어다 놓거나 클릭해서 선택하세요</div>
+    <div class="upload-desc">지원 형식: .xlsx, .xls · 컬럼: <strong style="color:#fff">카페명</strong> | <strong style="color:#fff">URL</strong></div>
+  </div>
+  <input type="file" id="file-input" accept=".xlsx,.xls" onchange="onFileSelect(event)">
+
+  <div class="section-label">직접 추가</div>
+  <div class="add-row">
+    <input type="text" id="add-cafe" placeholder="카페명 (예: 스펙업 카페)" style="max-width:200px">
+    <input type="text" id="add-url" placeholder="게시글 URL (예: https://cafe.naver.com/...)">
+    <button class="btn btn-primary" onclick="addManual()">+ 추가</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">수집 대상 목록 <span id="count-badge" style="font-size:11px;color:var(--faint);font-weight:400"></span></div>
+      <div class="panel-actions">
+        <button class="btn" onclick="clearAll()">전체 삭제</button>
+        <button class="btn btn-primary" id="start-btn" onclick="startCollect()">▶ 수집 시작</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:36px">#</th>
+            <th style="min-width:110px">카페명</th>
+            <th style="min-width:240px">게시글 URL</th>
+            <th style="min-width:70px">조회수</th>
+            <th style="min-width:70px">댓글수</th>
+            <th style="min-width:90px">상태</th>
+            <th style="min-width:180px">비고</th>
+            <th style="min-width:80px">수집 시각</th>
+            <th style="width:36px"></th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <tr class="empty-row"><td colspan="9">업로드하거나 URL을 직접 추가해주세요</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-label">
+      <span id="progress-text">수집 중...</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar-bg"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="progress-status" id="progress-status">준비 중...</div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+let rows = [];
+let collecting = false;
+let idCounter = 1;
+
+function render() {
+  const tbody = document.getElementById('table-body');
+  document.getElementById('count-badge').textContent = rows.length ? `(${rows.length}건)` : '';
+  if (!rows.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="9">업로드하거나 URL을 직접 추가해주세요</td></tr>';
+    document.getElementById('download-btn').style.display = 'none';
+    return;
+  }
+  tbody.innerHTML = rows.map((r, i) => `
+    <tr>
+      <td style="color:var(--faint)">${i+1}</td>
+      <td>${esc(r.cafe)}</td>
+      <td><a class="url-link" href="${esc(r.url)}" target="_blank" title="${esc(r.url)}">${shortUrl(r.url)}</a></td>
+      <td style="font-weight:600;color:${r.views !== null && r.status==='done' ? 'var(--blue-bright)' : 'var(--faint)'}">${r.status==='done' && r.views !== null ? r.views.toLocaleString() : '-'}</td>
+      <td style="font-weight:600;color:${r.comments !== null && r.status==='done' ? 'var(--green)' : 'var(--faint)'}">${r.status==='done' && r.comments !== null ? r.comments.toLocaleString() : '-'}</td>
+      <td>${badgeHtml(r.status)}</td>
+      <td><span class="note-text ${r.collectStatus === 'restricted' ? 'restricted' : r.collectStatus === 'error' ? 'error' : ''}" title="${esc(r.note)}">${esc(r.note) || '-'}</span></td>
+      <td style="color:var(--faint);font-size:11px">${r.time || '-'}</td>
+      <td><button class="del-btn" onclick="deleteRow(${r.id})">✕</button></td>
+    </tr>
+  `).join('');
+  const hasDone = rows.some(r => r.status === 'done' || r.collectStatus === 'restricted');
+  document.getElementById('download-btn').style.display = hasDone ? '' : 'none';
+}
+
+function badgeHtml(status) {
+  return {
+    wait: '<span class="badge badge-wait">대기중</span>',
+    loading: '<span class="badge badge-loading">⏳ 수집중</span>',
+    done: '<span class="badge badge-done">✓ 완료</span>',
+    restricted: '<span class="badge badge-restricted">🔒 권한없음</span>',
+    deleted: '<span class="badge badge-deleted">🗑 삭제됨</span>',
+    error: '<span class="badge badge-error">✕ 오류</span>',
+  }[status] || '';
+}
+
+function shortUrl(url) {
+  try {
+    const u = new URL(url);
+    const p = u.pathname.split('/').filter(Boolean);
+    return u.hostname + '/' + p.slice(0,2).join('/') + (p.length>2?'/...':'');
+  } catch { return url.slice(0,50); }
+}
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function addRow(cafe, url) {
+  if (!url || !url.startsWith('http')) return false;
+  rows.push({ id: idCounter++, cafe: cafe||'-', url, views: null, comments: null, status: 'wait', collectStatus: '', note: '', time: '' });
+  return true;
+}
+
+function addManual() {
+  const cafe = document.getElementById('add-cafe').value.trim();
+  const url = document.getElementById('add-url').value.trim();
+  if (!url) { showToast('URL을 입력해주세요.'); return; }
+  if (!url.startsWith('http')) { showToast('올바른 URL을 입력해주세요.'); return; }
+  if (rows.length >= 100) { showToast('최대 100개까지 등록할 수 있어요.'); return; }
+  addRow(cafe, url);
+  document.getElementById('add-cafe').value = '';
+  document.getElementById('add-url').value = '';
+  render();
+}
+
+function deleteRow(id) { rows = rows.filter(r => r.id !== id); render(); }
+function clearAll() {
+  if (!rows.length) return;
+  if (!confirm('목록을 전체 삭제할까요?')) return;
+  rows = []; render();
+}
+
+function onFileSelect(e) { const f = e.target.files[0]; if(f) readExcel(f); e.target.value=''; }
+function onDragOver(e) { e.preventDefault(); document.getElementById('upload-area').classList.add('drag-over'); }
+function onDragLeave() { document.getElementById('upload-area').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-area').classList.remove('drag-over');
+  const f = e.dataTransfer.files[0]; if(f) readExcel(f);
+}
+
+function readExcel(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'binary'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, {defval:''});
+      let added = 0;
+      data.forEach(row => {
+        if (rows.length >= 100) return;
+        const cafe = row['카페명'] || row['cafe'] || '';
+        const url = row['URL'] || row['url'] || row['게시글URL'] || '';
+        if (addRow(String(cafe).trim(), String(url).trim())) added++;
+      });
+      render();
+      showToast(added ? `✅ ${added}개 행을 불러왔어요.` : '데이터를 찾지 못했어요. 양식을 확인해주세요.');
+    } catch(err) { showToast('파일을 읽을 수 없어요. xlsx 형식인지 확인해주세요.'); }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function downloadTemplate() {
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['카페명','URL'],
+    ['스펙업 카페','https://cafe.naver.com/specup/0000000'],
+    ['예시 카페','https://cafe.naver.com/example/0000000'],
+  ]);
+  ws['!cols'] = [{wch:20},{wch:60}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '바이럴체커');
+  XLSX.writeFile(wb, '바이럴체커_입력양식.xlsx');
+}
+
+function downloadResult() {
+  const statusLabel = { wait:'대기중', loading:'수집중', done:'완료', restricted:'권한없음', deleted:'삭제됨', error:'오류' };
+  const data = rows.map(r => ({
+    '카페명': r.cafe,
+    'URL': r.url,
+    '조회수': r.status==='done' && r.views !== null ? r.views : '',
+    '댓글수': r.status==='done' && r.comments !== null ? r.comments : '',
+    '상태': statusLabel[r.status] || '',
+    '비고': r.note || '',
+    '수집시각': r.time || '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = [{wch:20},{wch:60},{wch:10},{wch:10},{wch:10},{wch:40},{wch:20}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '수집결과');
+  const now = new Date().toLocaleDateString('ko-KR').replace(/\.\s*/g,'-').replace(/-$/,'');
+  XLSX.writeFile(wb, `바이럴체커_결과_${now}.xlsx`);
+}
+
+async function startCollect() {
+  if (collecting) return;
+  if (!rows.length) { showToast('URL을 먼저 추가해주세요.'); return; }
+  const extReady = await checkExtension();
+  if (!extReady) {
+    document.getElementById('ext-banner').classList.add('show');
+    showToast('⚠️ Chrome 확장 프로그램을 먼저 설치해주세요.');
+    return;
+  }
+  document.getElementById('ext-banner').classList.remove('show');
+  collecting = true;
+  document.getElementById('start-btn').textContent = '수집 중...';
+  document.getElementById('start-btn').disabled = true;
+  document.getElementById('progress-wrap').classList.add('show');
+
+  const targets = rows.filter(r => r.status !== 'done' && r.status !== 'restricted' && r.status !== 'deleted');
+
+  for (let i = 0; i < targets.length; i++) {
+    const r = targets[i];
+    r.status = 'loading';
+    render();
+    updateProgress(i, targets.length, r.cafe, r.url);
+
+    try {
+      const result = await requestCollect(r.url);
+      r.collectStatus = result.status || 'done';
+      r.note = result.note || '';
+      r.views = result.views;
+      r.comments = result.comments;
+      r.status = result.status === 'restricted' ? 'restricted' : result.status === 'deleted' ? 'deleted' : 'done';
+      r.time = new Date().toLocaleTimeString('ko-KR');
+    } catch(err) {
+      r.status = 'error';
+      r.collectStatus = 'error';
+      r.note = err.message || '수집 중 오류 발생';
+      r.time = new Date().toLocaleTimeString('ko-KR');
+    }
+    render();
+    if (i < targets.length - 1) await sleep(1500);
+  }
+
+  updateProgress(targets.length, targets.length, '', '');
+  collecting = false;
+  document.getElementById('start-btn').textContent = '▶ 수집 시작';
+  document.getElementById('start-btn').disabled = false;
+  const doneCount = rows.filter(r => r.status === 'done').length;
+  const restrictedCount = rows.filter(r => r.status === 'restricted').length;
+  showToast(`✅ 완료! 수집 ${doneCount}건 / 접근제한 ${restrictedCount}건`);
+}
+
+function updateProgress(current, total, cafe, url) {
+  const pct = total ? Math.round((current/total)*100) : 0;
+  document.getElementById('progress-bar').style.width = pct+'%';
+  document.getElementById('progress-pct').textContent = pct+'%';
+  document.getElementById('progress-text').textContent = `수집 중 (${current}/${total})`;
+  document.getElementById('progress-status').textContent = current < total
+    ? `현재: ${cafe} — ${shortUrl(url)}`
+    : '✅ 모든 수집이 완료되었습니다.';
+}
+
+function checkExtension_OLD() {
+  return new Promise(resolve => {
+    if (window.__cafeChecker) { resolve(true); return; }
+    setTimeout(() => resolve(!!window.__cafeChecker), 1000);
+  });
+}
+
+function requestCollect(url) {
+  return new Promise((resolve, reject) => {
+    const reqId = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    const timeout = setTimeout(() => {
+      window.removeEventListener('message', handler);
+      reject(new Error('수집 시간 초과 (15초)'));
+    }, 15000);
+    function handler(e) {
+      if (e.data?.type === 'CAFE_CHECKER_RESULT' && e.data?.reqId === reqId) {
+        clearTimeout(timeout);
+        window.removeEventListener('message', handler);
+        if (e.data.error) reject(new Error(e.data.error));
+        else resolve({ views: e.data.views, comments: e.data.comments, status: e.data.status, note: e.data.note });
+      }
+    }
+    window.addEventListener('message', handler);
+    window.postMessage({ type: 'CAFE_CHECKER_REQUEST', url, reqId }, '*');
+  });
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.style.display='none', 3500);
+}
+function checkExtension() {
+  return new Promise(resolve => {
+    if (window.__cafeChecker) { resolve(true); return; }
+    let tries = 0;
+    const interval = setInterval(() => {
+      tries++;
+      if (window.__cafeChecker) { clearInterval(interval); resolve(true); }
+      else if (tries >= 30) { clearInterval(interval); resolve(false); }
+    }, 100);
+  });
+}
+document.getElementById('add-url').addEventListener('keydown', e => { if(e.key==='Enter') addManual(); });
+render();
+</script>
+</body>
+</html>
