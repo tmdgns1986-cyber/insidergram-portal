@@ -17,7 +17,7 @@ exports.handler = async (event, context) => {
   try {
     const body = JSON.parse(event.body);
     // max_tokens 충분히 늘림 (JSON이 잘리지 않도록)
-    body.max_tokens = 2000;
+    body.max_tokens = 6000;
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
