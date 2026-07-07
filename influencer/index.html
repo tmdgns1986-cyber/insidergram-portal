@@ -366,6 +366,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             피드단가 <input type="number" id="f-budget-min" placeholder="최소" oninput="renderList()"> ~ <input type="number" id="f-budget-max" placeholder="최대" oninput="renderList()">
           </div>
           <span class="fb-count">총 <strong id="list-count">0</strong>명</span>
+          <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#6B7080;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="selectall-list" onchange="toggleSelectAllIn('list-grid', this.checked)"> 전체선택
+          </label>
           <button class="btn btn-sm dl-select-btn" onclick="downloadSelectedExcel()" disabled>
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M8 2v9M4.5 8L8 11.5 11.5 8"/><path d="M2 13h12"/></svg>
             선택 엑셀 다운로드 (<span class="sel-count">0</span>)
@@ -735,10 +738,15 @@ ${ctx}
     } else {
       document.getElementById('search-area').innerHTML = `
         <div class="result-hd"><span><strong>${results.length}명</strong>의 인플루언서를 찾았습니다</span>
-          <button class="btn btn-sm dl-select-btn" onclick="downloadSelectedExcel()" disabled>
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M8 2v9M4.5 8L8 11.5 11.5 8"/><path d="M2 13h12"/></svg>
-            선택 엑셀 다운로드 (<span class="sel-count">0</span>)
-          </button>
+          <div style="display:flex;align-items:center;gap:10px">
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:#6B7080;cursor:pointer;white-space:nowrap">
+              <input type="checkbox" id="selectall-search" onchange="toggleSelectAllIn('search-area', this.checked)"> 전체선택
+            </label>
+            <button class="btn btn-sm dl-select-btn" onclick="downloadSelectedExcel()" disabled>
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M8 2v9M4.5 8L8 11.5 11.5 8"/><path d="M2 13h12"/></svg>
+              선택 엑셀 다운로드 (<span class="sel-count">0</span>)
+            </button>
+          </div>
         </div>
         <div class="inf-list">${results.map((res,i)=>{const inf=infs.find(r=>r.id===res.id);return inf?makeCardHTML(inf,i===0,res.feedback):'';}).join('')}</div>`;
       updateSelectionUI();
@@ -793,6 +801,16 @@ function toggleSelect(id){
 function updateSelectionUI(){
   document.querySelectorAll('.sel-count').forEach(el=>el.textContent = selectedIds.size);
   document.querySelectorAll('.dl-select-btn').forEach(btn=>btn.disabled = selectedIds.size===0);
+}
+function toggleSelectAllIn(containerId, checked){
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  container.querySelectorAll('.ir-select').forEach(cb=>{
+    const id = Number(cb.dataset.id);
+    if(checked) selectedIds.add(id); else selectedIds.delete(id);
+    cb.checked = checked;
+  });
+  updateSelectionUI();
 }
 function downloadSelectedExcel(){
   const rows = infs.filter(r=>selectedIds.has(r.id));
