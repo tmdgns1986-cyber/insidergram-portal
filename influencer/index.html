@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>인플루언서 서치 — 인사이더그램 컴퍼니</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F6FA;color:#1A1D27;font-size:14px}
@@ -103,26 +104,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── Influencer Cards ── */
-.inf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.inf-card{background:#fff;border:1px solid #E8EAF0;border-radius:12px;overflow:hidden;cursor:pointer;transition:all .15s}
-.inf-card:hover{border-color:#6C63FF;transform:translateY(-1px)}
-.inf-card.top-match{border-color:#6C63FF;box-shadow:0 0 0 3px rgba(108,99,255,.1)}
-.ic-top{padding:14px 16px 10px;display:flex;gap:10px}
-.ic-avatar{width:38px;height:38px;border-radius:50%;background:#6C63FF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
-.ic-name{font-size:14px;font-weight:600;color:#1A1D27}
-.ic-sub{font-size:11px;color:#9EA5B8;margin-top:2px}
-.ic-badges{display:flex;gap:5px;flex-wrap:wrap;margin:8px 16px 0}
-.ic-summary{background:#F5F6FA;border:1px solid #E8EAF0;border-radius:8px;padding:9px 12px;margin:10px 16px 0}
-.ic-sum-row{display:flex;gap:6px;align-items:flex-start;margin-bottom:5px}
-.ic-sum-row:last-child{margin-bottom:0}
-.ic-sum-lbl{font-size:9px;font-weight:600;color:#9EA5B8;background:#E8EAF0;padding:2px 5px;border-radius:3px;flex-shrink:0;margin-top:1px}
-.ic-sum-txt{font-size:12px;color:#6B7080;line-height:1.5}
-.ai-feedback{background:#EEF0FF;border-top:1px solid #C7C4FF;padding:10px 16px;margin-top:10px}
-.ai-feedback-head{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#534AB7;margin-bottom:4px}
-.ai-feedback p{font-size:12px;color:#3730a3;line-height:1.6}
-.ic-foot{padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #E8EAF0;margin-top:10px}
-.ic-meta{font-size:11px;color:#9EA5B8}
+/* ── Influencer List Rows ── */
+.inf-list{display:flex;flex-direction:column;gap:10px}
+.inf-row{background:#fff;border:1px solid #E8EAF0;border-radius:10px;overflow:hidden;cursor:pointer;transition:all .15s}
+.inf-row:hover{border-color:#6C63FF}
+.inf-row.top-match{border-color:#6C63FF;box-shadow:0 0 0 3px rgba(108,99,255,.1)}
+.ir-main{display:flex;align-items:center;gap:16px;padding:13px 18px;flex-wrap:wrap}
+.ir-avatar{width:36px;height:36px;border-radius:50%;background:#6C63FF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.ir-identity{width:130px;flex-shrink:0}
+.ir-name{font-size:13px;font-weight:600;color:#1A1D27}
+.ir-sub{font-size:11px;color:#9EA5B8;margin-top:2px}
+.ir-badges{display:flex;gap:5px;flex-wrap:wrap;width:230px;flex-shrink:0}
+.ir-notes{flex:1;min-width:120px;font-size:12px;color:#6B7080;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ir-cost{width:100px;flex-shrink:0;text-align:right}
+.ir-cost-label{font-size:9px;color:#9EA5B8}
+.ir-cost-val{font-size:13px;font-weight:600;color:#1A1D27}
+.ir-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.ir-date{font-size:11px;color:#9EA5B8;white-space:nowrap}
+.ir-ai{background:#EEF0FF;border-top:1px solid #C7C4FF;padding:10px 18px;font-size:12px;color:#3730a3;line-height:1.6}
+.ir-ai strong{color:#534AB7}
 .empty-state{text-align:center;padding:48px 20px;color:#9EA5B8}
 .empty-state svg{width:40px;height:40px;margin:0 auto 12px;display:block;opacity:.4}
 .empty-state p{font-size:13px}
@@ -364,12 +364,35 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           </div>
           <span class="fb-count">총 <strong id="list-count">0</strong>명</span>
         </div>
-        <div class="inf-grid" id="list-grid"></div>
+        <div class="inf-list" id="list-grid"></div>
       </div>
 
       <!-- REGISTER -->
       <div class="page" id="page-register">
         <div class="form-wrap">
+          <div class="form-card" style="border:2px solid #6C63FF;box-shadow:0 0 0 3px rgba(108,99,255,.08)">
+            <div class="form-card-head" style="background:#1A1D27">
+              <svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.5"><path d="M4 2h6l4 4v8a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M10 2v4h4"/><path d="M6 9h4M6 11.5h4"/></svg>
+              <span class="form-card-title" style="color:#fff">엑셀로 일괄 등록</span>
+            </div>
+            <div class="form-card-body">
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <button class="btn" onclick="downloadExcelTemplate()">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M8 2v9M4.5 8L8 11.5 11.5 8"/><path d="M2 13h12"/></svg>
+                  템플릿 다운로드
+                </button>
+                <label class="btn btn-primary" style="cursor:pointer">
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M8 11V2M4.5 5.5L8 2l3.5 3.5"/><path d="M2 13h12"/></svg>
+                  엑셀 파일 선택
+                  <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display:none" onchange="handleExcelUpload(event)">
+                </label>
+                <span id="excel-status" style="font-size:12px;color:#6B7080"></span>
+              </div>
+              <div class="field-hint accent" style="margin-top:8px">✦ 템플릿을 받아 정보를 채운 뒤 업로드하면 한 번에 여러 명을 등록할 수 있습니다. 엑셀에 새로운 카테고리를 적으면 자동으로 카테고리 목록에 추가됩니다.</div>
+              <div id="excel-preview"></div>
+            </div>
+          </div>
+
           <div class="form-card">
             <div class="form-card-head">
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 8h6M8 5v6"/></svg>
@@ -502,6 +525,9 @@ let fields = { categories: [] };
 
 /* ── 인플루언서 데이터 ── */
 let infs = [];
+
+/* ── 엑셀 일괄 등록 상태 ── */
+let excelRows = [];
 
 const distColors = ['#6C63FF','#22C55E','#F59E0B','#3B82F6','#EC4899','#94A3B8','#A855F7','#14B8A6'];
 
@@ -685,7 +711,7 @@ ${ctx}
     } else {
       document.getElementById('search-area').innerHTML = `
         <div class="result-hd"><span><strong>${results.length}명</strong>의 인플루언서를 찾았습니다</span></div>
-        <div class="inf-grid">${results.map((res,i)=>{const inf=infs.find(r=>r.id===res.id);return inf?makeCardHTML(inf,i===0,res.feedback):'';}).join('')}</div>`;
+        <div class="inf-list">${results.map((res,i)=>{const inf=infs.find(r=>r.id===res.id);return inf?makeCardHTML(inf,i===0,res.feedback):'';}).join('')}</div>`;
     }
   } catch(e){
     document.getElementById('search-area').innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><p style="color:#EF4444">오류가 발생했습니다.<br>${e.message||'잠시 후 다시 시도해주세요.'}</p></div>`;
@@ -696,28 +722,32 @@ ${ctx}
 
 /* ── 카드 HTML ── */
 function makeCardHTML(r, topMatch, aiFeedback){
-  const notesSnip = r.notes ? r.notes.slice(0,70).replace(/\n/g,' ')+(r.notes.length>70?'…':'') : '';
+  const notesSnip = r.notes ? r.notes.slice(0,60).replace(/\n/g,' ')+(r.notes.length>60?'…':'') : '특이사항 없음';
   const collabN = (r.collabs||[]).length;
-  const aiFb = aiFeedback ? `<div class="ai-feedback"><div class="ai-feedback-head"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><path d="M10 2L6 8l4 6M6 8h6"/></svg>AI 매칭 이유</div><p>${aiFeedback}</p></div>` : '';
-  return `<div class="inf-card${topMatch?' top-match':''}" onclick="openModal(${r.id})">
-    <div class="ic-top">
-      <div class="ic-avatar">${(r.name||'?').charAt(0).toUpperCase()}</div>
-      <div>
-        <div class="ic-name">${r.name}</div>
-        <div class="ic-sub">${[r.gender,r.age?r.age+'세':''].filter(Boolean).join(' · ')||'-'}</div>
+  const aiFb = aiFeedback ? `<div class="ir-ai"><strong>AI 매칭 이유 ·</strong> ${aiFeedback}</div>` : '';
+  return `<div class="inf-row${topMatch?' top-match':''}" onclick="openModal(${r.id})">
+    <div class="ir-main">
+      <div class="ir-avatar">${(r.name||'?').charAt(0).toUpperCase()}</div>
+      <div class="ir-identity">
+        <div class="ir-name">${r.name}</div>
+        <div class="ir-sub">${[r.gender,r.age?r.age+'세':''].filter(Boolean).join(' · ')||'-'}</div>
+      </div>
+      <div class="ir-badges">
+        ${r.category?`<span class="badge badge-purple">${r.category}</span>`:''}
+        <span class="badge badge-blue">${fmtFollowers(r.followers)}</span>
+        <span class="badge ${collabN?'badge-green':'badge-gray'}">협업 ${collabN}건</span>
+      </div>
+      <div class="ir-notes">${notesSnip}</div>
+      <div class="ir-cost">
+        <div class="ir-cost-label">피드단가</div>
+        <div class="ir-cost-val">${fmtWon(r.feed_cost)}</div>
+      </div>
+      <div class="ir-actions">
+        <span class="ir-date">${fmtDate(r.created_at)}</span>
+        <button class="btn btn-sm" onclick="event.stopPropagation();openModal(${r.id})">상세보기</button>
       </div>
     </div>
-    <div class="ic-badges">
-      ${r.category?`<span class="badge badge-purple">${r.category}</span>`:''}
-      <span class="badge badge-blue">팔로워 ${fmtFollowers(r.followers)}</span>
-      <span class="badge ${collabN?'badge-green':'badge-gray'}">협업 ${collabN}건</span>
-    </div>
-    <div class="ic-summary">
-      <div class="ic-sum-row"><span class="ic-sum-lbl">피드단가</span><span class="ic-sum-txt">${fmtWon(r.feed_cost)}</span></div>
-      ${notesSnip?`<div class="ic-sum-row"><span class="ic-sum-lbl">특이사항</span><span class="ic-sum-txt">${notesSnip}</span></div>`:''}
-    </div>
     ${aiFb}
-    <div class="ic-foot"><span class="ic-meta">${fmtDate(r.created_at)}</span><button class="btn btn-sm" onclick="event.stopPropagation();openModal(${r.id})">상세보기</button></div>
   </div>`;
 }
 
@@ -754,7 +784,7 @@ function renderList(){
   });
   document.getElementById('list-count').textContent = filtered.length;
   const grid = document.getElementById('list-grid');
-  grid.innerHTML = filtered.length ? filtered.map(r=>makeCardHTML(r,false,null)).join('') : `<div class="empty-state" style="grid-column:1/-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7H4a2 2 0 00-2 2v9a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 3H8v4h8V3z"/></svg><p>조건에 맞는 인플루언서가 없습니다.</p></div>`;
+  grid.innerHTML = filtered.length ? filtered.map(r=>makeCardHTML(r,false,null)).join('') : `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7H4a2 2 0 00-2 2v9a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 3H8v4h8V3z"/></svg><p>조건에 맞는 인플루언서가 없습니다.</p></div>`;
 }
 
 /* ── 상세 모달 ── */
@@ -880,6 +910,130 @@ async function submitForm(){
   if(error){ alert('저장 실패: '+error.message); return; }
   await loadInfs();
   showToast('인플루언서가 등록되었습니다!');
+  navigate('list');
+}
+
+/* ── 엑셀 일괄 등록 ── */
+function downloadExcelTemplate(){
+  const headers = ['이름','카테고리','성별','연령','팔로워','연락처','채널URL','피드제작비용','릴스제작비용','2차활용비용','특이사항','협업1_프로젝트명','협업1_내용','협업1_URL','협업2_프로젝트명','협업2_내용','협업2_URL','협업3_프로젝트명','협업3_내용','협업3_URL'];
+  const sample = ['김인플','뷰티','여성',27,45000,'010-1234-5678','https://instagram.com/example',500000,800000,'협의','일상 브이로그 톤 선호, 협찬 티 안 나는 자연스러운 연출 강점','농심 신제품 캠페인','릴스 2편 제작, 도달 12만','https://instagram.com/p/example','','','','','',''];
+  const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
+  ws['!cols'] = headers.map(()=>({wch:16}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '인플루언서');
+  XLSX.writeFile(wb, '인플루언서_등록_템플릿.xlsx');
+}
+
+function parseExcelRow(row){
+  const collabs = [];
+  for(let i=1;i<=3;i++){
+    const project = String(row[`협업${i}_프로젝트명`]||'').trim();
+    const content = String(row[`협업${i}_내용`]||'').trim();
+    const url = String(row[`협업${i}_URL`]||'').trim();
+    if(project||content||url) collabs.push({project, content, url});
+  }
+  const toNum = v => (v===''||v===null||v===undefined||isNaN(Number(v))) ? null : Number(v);
+  return {
+    name: String(row['이름']||'').trim(),
+    category: String(row['카테고리']||'').trim(),
+    gender: String(row['성별']||'').trim() || null,
+    age: toNum(row['연령']),
+    followers: toNum(row['팔로워']),
+    contact: String(row['연락처']||'').trim() || null,
+    channel_url: String(row['채널URL']||'').trim(),
+    feed_cost: toNum(row['피드제작비용']),
+    reels_cost: toNum(row['릴스제작비용']),
+    usage_cost: String(row['2차활용비용']||'').trim() || null,
+    notes: String(row['특이사항']||'').trim() || null,
+    collabs,
+  };
+}
+
+function handleExcelUpload(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const status = document.getElementById('excel-status');
+  status.textContent = '파일을 읽는 중...';
+  document.getElementById('excel-preview').innerHTML = '';
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const data = new Uint8Array(evt.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+      excelRows = rows.map(parseExcelRow).filter(r=>r.name);
+      if(!excelRows.length){
+        status.textContent = '인식된 행이 없습니다. 템플릿 양식을 확인해주세요.';
+        return;
+      }
+      status.textContent = `${excelRows.length}건 인식됨`;
+      renderExcelPreview();
+    }catch(err){
+      status.textContent = '파일을 읽지 못했습니다: ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderExcelPreview(){
+  const el = document.getElementById('excel-preview');
+  if(!excelRows.length){ el.innerHTML=''; return; }
+  const invalidCount = excelRows.filter(r=>!r.name||!r.category||!r.channel_url).length;
+  el.innerHTML = `
+    <div style="border:1px solid #E8EAF0;border-radius:8px;overflow:hidden;margin-top:14px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#F5F6FA">
+          <th style="text-align:left;padding:8px 10px;font-size:10px;color:#9EA5B8">이름</th>
+          <th style="text-align:left;padding:8px 10px;font-size:10px;color:#9EA5B8">카테고리</th>
+          <th style="text-align:left;padding:8px 10px;font-size:10px;color:#9EA5B8">팔로워</th>
+          <th style="text-align:left;padding:8px 10px;font-size:10px;color:#9EA5B8">협업</th>
+        </tr></thead>
+        <tbody>${excelRows.slice(0,50).map(r=>`<tr style="border-top:1px solid #E8EAF0">
+          <td style="padding:7px 10px">${r.name||'<span style=\"color:#EF4444\">(필수누락)</span>'}</td>
+          <td style="padding:7px 10px">${r.category||'<span style=\"color:#EF4444\">(필수누락)</span>'}</td>
+          <td style="padding:7px 10px">${fmtFollowers(r.followers)}</td>
+          <td style="padding:7px 10px">${r.collabs.length}건</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+    ${excelRows.length>50?`<div class="field-hint" style="margin-top:6px">50건까지 미리보기, 전체 ${excelRows.length}건이 등록됩니다.</div>`:''}
+    ${invalidCount?`<div class="field-hint" style="margin-top:6px;color:#EF4444">이름/카테고리/채널URL이 비어있는 행이 ${invalidCount}건 있습니다. 등록 전 엑셀을 수정해주세요.</div>`:''}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-primary" onclick="submitExcelRows()" ${invalidCount?'disabled':''}>일괄 등록하기 (${excelRows.length}명)</button>
+      <button class="btn" onclick="cancelExcelUpload()">취소</button>
+    </div>
+  `;
+}
+
+function cancelExcelUpload(){
+  excelRows = [];
+  document.getElementById('excel-preview').innerHTML = '';
+  document.getElementById('excel-file-input').value = '';
+  document.getElementById('excel-status').textContent = '';
+}
+
+async function submitExcelRows(){
+  if(!excelRows.length) return;
+  const invalid = excelRows.filter(r=>!r.name||!r.category||!r.channel_url);
+  if(invalid.length){ alert(`이름/카테고리/채널URL이 비어있는 행이 ${invalid.length}건 있습니다. 확인 후 다시 시도해주세요.`); return; }
+  const status = document.getElementById('excel-status');
+  status.textContent = '등록 중...';
+
+  const newCats = [...new Set(excelRows.map(r=>r.category))].filter(c=>c && !fields.categories.includes(c));
+  for(const c of newCats){
+    const sortOrder = fields.categories.length + 1;
+    const {error} = await sb.from('influencer_fields').insert({field_key:'category', value:c, sort_order:sortOrder});
+    if(!error) fields.categories.push(c);
+  }
+
+  const {error} = await sb.from('influencers').insert(excelRows);
+  if(error){ status.textContent=''; alert('일괄 등록 실패: '+error.message); return; }
+
+  const registeredCount = excelRows.length;
+  await loadInfs();
+  cancelExcelUpload();
+  showToast(`엑셀 일괄 등록이 완료되었습니다! (${registeredCount}명)`);
   navigate('list');
 }
 
