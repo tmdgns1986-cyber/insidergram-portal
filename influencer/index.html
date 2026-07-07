@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%236C63FF'/><circle cx='16' cy='12' r='5' fill='white'/><path d='M7 26c0-5 4-8 9-8s9 3 9 8' fill='white'/></svg>">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>인플루언서 서치 — 인사이더그램 컴퍼니</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F6FA;color:#1A1D27;font-size:14px}
+#app{display:flex;height:100vh;overflow:hidden}
+
+/* ── Sidebar ── */
+#sidebar{width:220px;background:#1A1D27;display:flex;flex-direction:column;flex-shrink:0}
+#logo{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,0.07);cursor:pointer}
+#logo:hover{background:rgba(255,255,255,0.04)}
+.logo-back{font-size:11px;color:#6C63FF;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.logo-mark{display:flex;align-items:center;gap:9px}
+.logo-icon{width:28px;height:28px;background:#6C63FF;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-icon svg{width:15px;height:15px}
+.logo-text{font-size:13px;font-weight:600;color:#fff}
+.logo-sub{font-size:10px;color:rgba(255,255,255,0.3);margin-top:1px}
+#nav{padding:12px 8px;flex:1;overflow-y:auto}
+.nav-label{font-size:9px;font-weight:600;color:rgba(255,255,255,0.3);letter-spacing:.08em;text-transform:uppercase;padding:0 8px;margin-bottom:5px;margin-top:10px}
+.nav-label:first-child{margin-top:0}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;color:rgba(255,255,255,0.45);font-size:13px;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:inherit;margin-bottom:2px;transition:all .15s}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.nav-item:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.9)}
+.nav-item.active{background:rgba(255,255,255,0.1);color:#fff;font-weight:500}
+.nav-item.active svg{color:#6C63FF}
+.nav-divider{height:1px;background:rgba(255,255,255,0.06);margin:8px 0}
+#sidebar-bottom{padding:12px;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0}
+.sidebar-user{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px}
+.s-avatar{width:26px;height:26px;border-radius:50%;background:#6C63FF;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0}
+.s-name{font-size:12px;color:#fff;font-weight:500}
+.s-role{font-size:10px;color:rgba(255,255,255,0.3)}
+
+/* ── Main ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{height:52px;background:#fff;border-bottom:1px solid #E8EAF0;display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0}
+#page-title{font-size:15px;font-weight:600;color:#1A1D27;flex:1}
+#content{flex:1;overflow-y:auto;padding:24px}
+
+/* ── Pages ── */
+.page{display:none}
+.page.active{display:block}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid #D0D4E0;background:#fff;color:#1A1D27;transition:all .15s;font-family:inherit}
+.btn:hover{background:#F5F6FA}
+.btn-primary{background:#6C63FF;color:#fff;border-color:#6C63FF}
+.btn-primary:hover{background:#5B53EE}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-ghost{border-color:transparent;background:transparent;color:#6B7080}
+.btn-ghost:hover{background:#F5F6FA;border-color:#D0D4E0}
+
+/* ── Cards ── */
+.surface{background:#fff;border:1px solid #E8EAF0;border-radius:12px;overflow:hidden}
+.card-head{padding:14px 18px;border-bottom:1px solid #E8EAF0;display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:600;color:#1A1D27}
+.card-body{padding:18px}
+
+/* ── Dashboard ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat-card{background:#fff;border:1px solid #E8EAF0;border-radius:12px;padding:16px 18px}
+.stat-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.stat-icon.purple{background:#EEF0FF;color:#6C63FF}
+.stat-icon.green{background:#DCFCE7;color:#22C55E}
+.stat-icon.amber{background:#FEF3C7;color:#F59E0B}
+.stat-icon.blue{background:#DBEAFE;color:#3B82F6}
+.stat-icon svg{width:17px;height:17px}
+.stat-val{font-size:22px;font-weight:600;color:#1A1D27;line-height:1}
+.stat-lbl{font-size:11px;color:#6B7080;margin-top:4px}
+.dash-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.dist-item{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.dist-item:last-child{margin-bottom:0}
+.dist-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dist-lbl{font-size:12px;color:#1A1D27;flex:1}
+.dist-bar-w{width:80px;height:5px;background:#F5F6FA;border-radius:99px;overflow:hidden}
+.dist-bar{height:100%;border-radius:99px}
+.dist-n{font-size:12px;color:#6B7080;min-width:16px;text-align:right}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;font-size:10px;font-weight:500;padding:2px 7px;border-radius:99px}
+.badge-purple{background:#EEF0FF;color:#534AB7}
+.badge-green{background:#DCFCE7;color:#15803d}
+.badge-amber{background:#FEF3C7;color:#92400e}
+.badge-blue{background:#DBEAFE;color:#1d4ed8}
+.badge-pink{background:#FCE7F3;color:#be185d}
+.badge-gray{background:#F5F6FA;color:#6B7080;border:1px solid #E8EAF0}
+
+/* ── Search ── */
+.search-hero{background:#1A1D27;border-radius:14px;padding:24px 24px 20px;margin-bottom:18px;position:relative;overflow:hidden}
+.search-hero::before{content:'';position:absolute;top:-30px;right:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(108,99,255,.2) 0%,transparent 70%);pointer-events:none}
+.sh-title{font-size:17px;font-weight:600;color:#fff;margin-bottom:3px}
+.sh-sub{font-size:12px;color:rgba(255,255,255,.35);margin-bottom:16px}
+.sh-wrap{display:flex;gap:8px}
+.sh-input{flex:1;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.08);color:#fff;font-size:13px;font-family:inherit;transition:all .15s}
+.sh-input::placeholder{color:rgba(255,255,255,.3)}
+.sh-input:focus{outline:none;border-color:#6C63FF;background:rgba(255,255,255,.1)}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Influencer Cards ── */
+.inf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.inf-card{background:#fff;border:1px solid #E8EAF0;border-radius:12px;overflow:hidden;cursor:pointer;transition:all .15s}
+.inf-card:hover{border-color:#6C63FF;transform:translateY(-1px)}
+.inf-card.top-match{border-color:#6C63FF;box-shadow:0 0 0 3px rgba(108,99,255,.1)}
+.ic-top{padding:14px 16px 10px;display:flex;gap:10px}
+.ic-avatar{width:38px;height:38px;border-radius:50%;background:#6C63FF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex-shrink:0}
+.ic-name{font-size:14px;font-weight:600;color:#1A1D27}
+.ic-sub{font-size:11px;color:#9EA5B8;margin-top:2px}
+.ic-badges{display:flex;gap:5px;flex-wrap:wrap;margin:8px 16px 0}
+.ic-summary{background:#F5F6FA;border:1px solid #E8EAF0;border-radius:8px;padding:9px 12px;margin:10px 16px 0}
+.ic-sum-row{display:flex;gap:6px;align-items:flex-start;margin-bottom:5px}
+.ic-sum-row:last-child{margin-bottom:0}
+.ic-sum-lbl{font-size:9px;font-weight:600;color:#9EA5B8;background:#E8EAF0;padding:2px 5px;border-radius:3px;flex-shrink:0;margin-top:1px}
+.ic-sum-txt{font-size:12px;color:#6B7080;line-height:1.5}
+.ai-feedback{background:#EEF0FF;border-top:1px solid #C7C4FF;padding:10px 16px;margin-top:10px}
+.ai-feedback-head{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#534AB7;margin-bottom:4px}
+.ai-feedback p{font-size:12px;color:#3730a3;line-height:1.6}
+.ic-foot{padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #E8EAF0;margin-top:10px}
+.ic-meta{font-size:11px;color:#9EA5B8}
+.empty-state{text-align:center;padding:48px 20px;color:#9EA5B8}
+.empty-state svg{width:40px;height:40px;margin:0 auto 12px;display:block;opacity:.4}
+.empty-state p{font-size:13px}
+.result-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.result-hd span{font-size:13px;color:#6B7080}
+
+/* ── Filter bar ── */
+.filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;background:#fff;border:1px solid #E8EAF0;border-radius:10px;padding:12px}
+.filter-bar .fb-search{display:flex;align-items:center;border:1px solid #E8EAF0;border-radius:8px;background:#fff;overflow:hidden;flex:0 0 200px}
+.filter-bar .fb-search input{border:none;outline:none;font-size:13px;background:transparent;padding:8px 0;flex:1;font-family:inherit}
+.filter-bar select{padding:7px 10px;border-radius:8px;border:1px solid #E8EAF0;background:#fff;font-size:13px;font-family:inherit}
+.fb-range{display:flex;align-items:center;gap:4px;font-size:12px;color:#6B7080}
+.fb-range input{width:76px;padding:6px 8px;border:1px solid #E8EAF0;border-radius:6px;font-size:12px;font-family:inherit}
+.fb-count{margin-left:auto;font-size:13px;color:#6B7080;white-space:nowrap}
+
+/* ── Register Form ── */
+.form-wrap{max-width:720px}
+.form-card{background:#fff;border:1px solid #E8EAF0;border-radius:12px;overflow:hidden;margin-bottom:14px}
+.form-card-head{padding:12px 18px;background:#F5F6FA;border-bottom:1px solid #E8EAF0;display:flex;align-items:center;gap:8px}
+.form-card-head svg{width:16px;height:16px;color:#6C63FF;flex-shrink:0}
+.form-card-title{font-size:13px;font-weight:600;color:#1A1D27}
+.form-card-body{padding:18px}
+.form-row{display:grid;gap:14px;margin-bottom:14px}
+.form-row:last-child{margin-bottom:0}
+.form-row.c2{grid-template-columns:1fr 1fr}
+.form-row.c3{grid-template-columns:1fr 1fr 1fr}
+.form-row.c1{grid-template-columns:1fr}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;font-weight:600;color:#6B7080}
+.req{color:#EF4444;margin-left:2px}
+.field input,.field select,.field textarea{padding:9px 12px;border:1px solid #D0D4E0;border-radius:8px;font-size:13px;color:#1A1D27;background:#fff;font-family:inherit;transition:border .15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#6C63FF;box-shadow:0 0 0 3px rgba(108,99,255,.08)}
+.field textarea{resize:vertical;line-height:1.65;min-height:80px}
+.field-hint{font-size:11px;color:#9EA5B8;line-height:1.5}
+.field-hint.accent{color:#6C63FF}
+.field-with-add{display:flex;gap:6px}
+.field-with-add select{flex:1}
+.field-with-add button{flex-shrink:0;padding:0 12px;border:1px solid #D0D4E0;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;color:#6C63FF;font-weight:600}
+.field-with-add button:hover{background:#EEF0FF}
+
+/* Collab rows */
+.collab-rows{display:flex;flex-direction:column;gap:10px}
+.collab-row{display:grid;grid-template-columns:1fr 1.6fr 1fr auto;gap:8px;align-items:start;background:#F5F6FA;border:1px solid #E8EAF0;border-radius:8px;padding:10px}
+.collab-row input,.collab-row textarea{padding:7px 10px;border:1px solid #D0D4E0;border-radius:6px;font-size:12px;font-family:inherit;background:#fff}
+.collab-row textarea{resize:vertical;min-height:38px;line-height:1.5}
+.collab-del{background:none;border:none;cursor:pointer;color:#9EA5B8;font-size:16px;padding:5px;border-radius:6px;line-height:1;transition:all .12s}
+.collab-del:hover{color:#EF4444;background:#FEE2E2}
+.add-collab-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#6C63FF;cursor:pointer;padding:5px 0;background:none;border:none;font-family:inherit;font-weight:500;margin-top:8px}
+.add-collab-btn:hover{text-decoration:underline}
+.form-actions{display:flex;justify-content:flex-end;gap:8px;padding:16px 0 28px}
+
+/* Field Manager */
+.fmgr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.fmgr-group{background:#fff;border:1px solid #E8EAF0;border-radius:12px;overflow:hidden}
+.fmgr-head{padding:12px 16px;background:#F5F6FA;border-bottom:1px solid #E8EAF0;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#1A1D27}
+.fmgr-head svg{width:15px;height:15px;color:#6C63FF}
+.fmgr-items{padding:8px}
+.fmgr-item{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:6px;transition:background .12s}
+.fmgr-item:hover{background:#F5F6FA}
+.fmgr-item span{font-size:13px;color:#1A1D27}
+.fmgr-del{background:none;border:none;cursor:pointer;color:#9EA5B8;font-size:14px;padding:3px 5px;border-radius:6px;line-height:1}
+.fmgr-edit-btn{background:none;border:none;cursor:pointer;color:#9EA5B8;font-size:14px;padding:3px 5px;border-radius:6px;line-height:1}
+.fmgr-edit-btn:hover{color:#6C63FF;background:#EEF0FF}
+.fmgr-del:hover{color:#EF4444;background:#FEE2E2}
+.fmgr-add{display:flex;gap:6px;padding:10px;border-top:1px solid #E8EAF0}
+.fmgr-add input{flex:1;padding:7px 10px;border:1px solid #D0D4E0;border-radius:8px;font-size:13px;color:#1A1D27;background:#fff;font-family:inherit}
+.fmgr-add input:focus{outline:none;border-color:#6C63FF}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,17,28,.55);display:none;align-items:flex-start;justify-content:center;padding:40px 20px;z-index:200;overflow-y:auto;backdrop-filter:blur(2px)}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;border:1px solid #E8EAF0;box-shadow:0 12px 40px rgba(0,0,0,.15);width:100%;max-width:640px;flex-shrink:0;overflow:hidden}
+.modal-hd{padding:20px 24px 16px;background:#1A1D27;display:flex;align-items:flex-start;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:600;color:#fff;margin-bottom:3px}
+.modal-meta{font-size:11px;color:rgba(255,255,255,.35)}
+.modal-close{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;flex-shrink:0;margin-left:12px}
+.modal-close:hover{background:rgba(255,255,255,.15);color:#fff}
+.modal-body{padding:20px 24px;max-height:68vh;overflow-y:auto}
+.m-sec{margin-bottom:18px}
+.m-sec:last-child{margin-bottom:0}
+.m-lbl{font-size:10px;font-weight:600;color:#9EA5B8;text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+.m-lbl::after{content:'';flex:1;height:1px;background:#E8EAF0}
+.m-txt{font-size:13px;color:#1A1D27;line-height:1.7;white-space:pre-wrap}
+.m-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.m-kv{background:#F5F6FA;border:1px solid #E8EAF0;border-radius:8px;padding:9px 12px}
+.m-kv-k{font-size:10px;color:#9EA5B8;margin-bottom:2px}
+.m-kv-v{font-size:13px;color:#1A1D27;font-weight:600}
+.collab-list{display:flex;flex-direction:column;gap:8px}
+.collab-item{background:#F5F6FA;border:1px solid #E8EAF0;border-radius:8px;padding:10px 12px}
+.collab-item-title{font-size:13px;font-weight:600;color:#1A1D27;margin-bottom:4px}
+.collab-item-body{font-size:12px;color:#6B7080;line-height:1.6;white-space:pre-wrap}
+.collab-item a{font-size:11px;color:#6C63FF;display:inline-flex;align-items:center;gap:4px;margin-top:5px;text-decoration:none}
+.collab-item a:hover{text-decoration:underline}
+.chan-link{font-size:13px;color:#6C63FF;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.chan-link:hover{text-decoration:underline}
+.modal-ft{padding:12px 24px;border-top:1px solid #E8EAF0;background:#F5F6FA;display:flex;gap:8px}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:#1A1D27;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:9px;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:999;transform:translateY(10px);opacity:0;transition:all .25s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast svg{width:16px;height:16px;color:#22C55E;flex-shrink:0}
+
+/* Loading */
+.loading-box{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;gap:12px}
+.loading-txt{font-size:13px;color:#6B7080}
+.big-spinner{width:28px;height:28px;border:3px solid #E8EAF0;border-top-color:#6C63FF;border-radius:50%;animation:spin .7s linear infinite}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div id="logo" onclick="goHome()">
+      <div class="logo-back">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><path d="M10 12L6 8l4-4"/></svg>
+        포털 홈으로
+      </div>
+      <div class="logo-mark">
+        <div class="logo-icon">
+          <svg viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.5"><circle cx="10" cy="7" r="3.2"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+        </div>
+        <div>
+          <div class="logo-text">인플루언서 서치</div>
+          <div class="logo-sub">인사이더그램 컴퍼니</div>
+        </div>
+      </div>
+    </div>
+    <nav id="nav">
+      <div class="nav-label">메인</div>
+      <button class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        대시보드
+      </button>
+      <button class="nav-item" data-page="search" onclick="navigate('search')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 2L6 8l4 6M6 8h6"/></svg>
+        AI 검색
+      </button>
+      <button class="nav-item" data-page="list" onclick="navigate('list')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M5 7h6M5 10h4"/></svg>
+        필터 검색
+      </button>
+      <div class="nav-divider"></div>
+      <div class="nav-label">관리</div>
+      <button class="nav-item" data-page="register" onclick="navigate('register')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M5 8h6"/></svg>
+        인플루언서 등록
+      </button>
+      <button class="nav-item" data-page="fields" onclick="navigate('fields')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h8M2 12h5"/><circle cx="13" cy="12" r="2.5"/><path d="M13 10.5v1M13 13.5v1M11.5 12h1M14.5 12h1" stroke-width="1"/></svg>
+        카테고리 관리
+      </button>
+    </nav>
+    <div id="sidebar-bottom">
+      <div class="sidebar-user">
+        <div class="s-avatar" id="s-avatar">?</div>
+        <div>
+          <div class="s-name" id="s-name">로딩 중...</div>
+          <div class="s-role" id="s-role"></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div id="main">
+    <div id="topbar">
+      <div id="page-title">대시보드</div>
+      <button class="btn btn-primary btn-sm" onclick="navigate('register')">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M5 8h6"/></svg>
+        인플루언서 등록
+      </button>
+    </div>
+    <div id="content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="stat-grid" id="dash-stats"></div>
+        <div class="dash-row" id="dash-charts"></div>
+        <div class="surface">
+          <div class="card-head">
+            <span class="card-title">최근 등록된 인플루언서</span>
+            <button class="btn btn-ghost btn-sm" onclick="navigate('list')">전체보기 →</button>
+          </div>
+          <div style="padding:0 18px">
+            <table style="width:100%;border-collapse:collapse" id="dash-table">
+              <thead><tr>
+                <th style="font-size:10px;font-weight:600;color:#9EA5B8;text-transform:uppercase;letter-spacing:.05em;padding:0 0 8px;text-align:left;border-bottom:1px solid #E8EAF0;width:160px">이름</th>
+                <th style="font-size:10px;font-weight:600;color:#9EA5B8;text-transform:uppercase;letter-spacing:.05em;padding:0 0 8px;text-align:left;border-bottom:1px solid #E8EAF0">성별</th>
+                <th style="font-size:10px;font-weight:600;color:#9EA5B8;text-transform:uppercase;letter-spacing:.05em;padding:0 0 8px;text-align:left;border-bottom:1px solid #E8EAF0">팔로워</th>
+                <th style="font-size:10px;font-weight:600;color:#9EA5B8;text-transform:uppercase;letter-spacing:.05em;padding:0 0 8px;text-align:left;border-bottom:1px solid #E8EAF0">협업이력</th>
+                <th style="font-size:10px;font-weight:600;color:#9EA5B8;text-transform:uppercase;letter-spacing:.05em;padding:0 0 8px;text-align:left;border-bottom:1px solid #E8EAF0">등록일</th>
+              </tr></thead>
+              <tbody id="dash-recent"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI SEARCH -->
+      <div class="page" id="page-search">
+        <div class="search-hero">
+          <div class="sh-title">AI 인플루언서 검색</div>
+          <div class="sh-sub">찾고 있는 조건이나 캠페인 상황을 구어체로 편하게 설명하면 AI가 특이사항·협업이력을 분석해 어울리는 인플루언서를 찾아드립니다.</div>
+          <div class="sh-wrap">
+            <input class="sh-input" id="search-q" type="text" placeholder="예: 2030 여성 뷰티 팔로워 많고 협업 이력 있는 인플루언서, 릴스 잘 만드는 사람" onkeydown="if(event.key==='Enter')doSearch()">
+            <button class="btn btn-primary" id="search-btn" onclick="doSearch()">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M10 2L6 8l4 6M6 8h6"/></svg>
+              AI 검색
+            </button>
+          </div>
+        </div>
+        <div id="search-area"></div>
+      </div>
+
+      <!-- LIST / FILTER SEARCH -->
+      <div class="page" id="page-list">
+        <div class="filter-bar">
+          <div class="fb-search">
+            <svg viewBox="0 0 16 16" fill="none" stroke="#9EA5B8" stroke-width="1.5" width="16" height="16" style="margin:0 10px;flex-shrink:0"><circle cx="7" cy="7" r="4"/><path d="M10 10l3 3"/></svg>
+            <input type="text" id="list-q" placeholder="이름, 특이사항 검색..." oninput="renderList()">
+          </div>
+          <select id="f-cat" onchange="renderList()"><option value="">전체 카테고리</option></select>
+          <select id="list-gender" onchange="renderList()">
+            <option value="">전체 성별</option>
+            <option value="여성">여성</option>
+            <option value="남성">남성</option>
+            <option value="기타">기타</option>
+          </select>
+          <select id="f-collab" onchange="renderList()">
+            <option value="">협업이력 전체</option>
+            <option value="y">협업이력 있음</option>
+            <option value="n">협업이력 없음</option>
+          </select>
+          <div class="fb-range">
+            팔로워 <input type="number" id="f-follow-min" placeholder="최소" oninput="renderList()"> ~ <input type="number" id="f-follow-max" placeholder="최대" oninput="renderList()">
+          </div>
+          <div class="fb-range">
+            피드단가 <input type="number" id="f-budget-min" placeholder="최소" oninput="renderList()"> ~ <input type="number" id="f-budget-max" placeholder="최대" oninput="renderList()">
+          </div>
+          <span class="fb-count">총 <strong id="list-count">0</strong>명</span>
+        </div>
+        <div class="inf-grid" id="list-grid"></div>
+      </div>
+
+      <!-- REGISTER -->
+      <div class="page" id="page-register">
+        <div class="form-wrap">
+          <div class="form-card">
+            <div class="form-card-head">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 8h6M8 5v6"/></svg>
+              <span class="form-card-title">기본 정보</span>
+            </div>
+            <div class="form-card-body">
+              <div class="form-row c2">
+                <div class="field"><label>이름<span class="req">*</span></label><input id="f-name" type="text" placeholder="예: 김인플"></div>
+                <div class="field">
+                  <label>카테고리<span class="req">*</span></label>
+                  <div class="field-with-add">
+                    <select id="f-category"></select>
+                    <button type="button" onclick="quickAddCategory()">+ 추가</button>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row c3">
+                <div class="field"><label>성별</label>
+                  <select id="f-gender"><option value="">선택</option><option value="여성">여성</option><option value="남성">남성</option><option value="기타">기타</option></select>
+                </div>
+                <div class="field"><label>연령</label><input id="f-age" type="number" placeholder="예: 27"></div>
+                <div class="field"><label>팔로워 수</label><input id="f-followers" type="number" placeholder="예: 45000"></div>
+              </div>
+              <div class="form-row c2">
+                <div class="field"><label>연락처</label><input id="f-contact" type="text" placeholder="전화번호 또는 이메일"></div>
+                <div class="field"><label>인스타그램 채널 URL<span class="req">*</span></label><input id="f-channel" type="url" placeholder="https://instagram.com/..."></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-head">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5h12M2 8h12M2 11h8" /></svg>
+              <span class="form-card-title">비용 정보</span>
+            </div>
+            <div class="form-card-body">
+              <div class="form-row c3">
+                <div class="field"><label>피드 제작비용 (원)</label><input id="f-feedcost" type="number" placeholder="예: 500000"></div>
+                <div class="field"><label>릴스 제작비용 (원)</label><input id="f-reelscost" type="number" placeholder="예: 800000"></div>
+                <div class="field"><label>2차활용 비용</label><input id="f-usagecost" type="text" placeholder="예: 300만원 / 협의 / 무제한 2차 활용 가능"></div>
+              </div>
+              <div class="field-hint">2차활용 비용은 숫자로 딱 떨어지지 않는 경우가 많아 자유롭게 텍스트로 입력할 수 있습니다.</div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-head">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h12v2H2zM2 8h12v2H2zM2 13h7"/></svg>
+              <span class="form-card-title">특이사항</span>
+            </div>
+            <div class="form-card-body">
+              <div class="form-row c1">
+                <div class="field">
+                  <label>특이사항</label>
+                  <textarea id="f-notes" rows="5" placeholder="콘텐츠 스타일, 협업 시 유의사항, 소통 방식, 강점 등 자유롭게 작성해주세요.&#10;&#10;예: 일상 브이로그 톤 선호, 협찬 티 안 나는 자연스러운 연출 강점. 답장 빠르고 수정 요청에 유연함."></textarea>
+                  <div class="field-hint accent">✦ AI 검색이 이 내용을 기반으로 어울리는 인플루언서를 찾습니다.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-head">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="10" width="3" height="4" rx="1"/><rect x="6" y="6" width="3" height="8" rx="1"/><rect x="10" y="2" width="3" height="12" rx="1"/></svg>
+              <span class="form-card-title">협업 이력</span>
+            </div>
+            <div class="form-card-body">
+              <div class="collab-rows" id="collab-rows">
+                <div class="collab-row">
+                  <input class="collab-project" type="text" placeholder="협업 프로젝트명">
+                  <textarea class="collab-content" rows="2" placeholder="협업 내용"></textarea>
+                  <input class="collab-url" type="url" placeholder="참고 URL">
+                  <button class="collab-del" onclick="removeCollab(this)">✕</button>
+                </div>
+              </div>
+              <button class="add-collab-btn" onclick="addCollab()">+ 행 추가</button>
+              <div class="field-hint" style="margin-top:6px">과거 협업한 프로젝트를 행 단위로 여러 개 추가할 수 있습니다.</div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn" onclick="navigate('list')">취소</button>
+            <button class="btn btn-primary" onclick="submitForm()">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M3 8l4 4 6-7"/></svg>
+              등록 완료
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FIELDS (categories) -->
+      <div class="page" id="page-fields">
+        <p style="font-size:13px;color:#6B7080;margin-bottom:18px;line-height:1.6">인플루언서 카테고리를 추가하거나 삭제할 수 있습니다. 변경사항은 등록 폼과 필터에 즉시 반영됩니다.</p>
+        <div class="fmgr-grid" id="fmgr-grid"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-hd">
+      <div><div class="modal-title" id="m-name"></div><div class="modal-meta" id="m-meta"></div></div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="m-body"></div>
+    <div class="modal-ft" id="modal-ft-btns"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg>
+  <span id="toast-msg"></span>
+</div>
+
+<script>
+/* ── Supabase 연결 ── */
+const SUPABASE_URL = 'https://wykcorpvmnfjqbvqynla.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5a2NvcnB2bW5manFidnF5bmxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MTUzMzAsImV4cCI6MjA5MzM5MTMzMH0.oIGBdRj6sjSw8TvPb03NaEBemML8Y35CM5xo9NJ_q30';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ── 현재 사용자 ── */
+let currentUserRole = null;
+
+/* ── 필드 설정 (카테고리) ── */
+let fields = { categories: [] };
+
+/* ── 인플루언서 데이터 ── */
+let infs = [];
+
+const distColors = ['#6C63FF','#22C55E','#F59E0B','#3B82F6','#EC4899','#94A3B8','#A855F7','#14B8A6'];
+
+/* ── 포맷 유틸 ── */
+function fmtDate(ts){
+  if(!ts) return '-';
+  const utc = ts.endsWith('Z')||ts.includes('+') ? ts : ts+'Z';
+  return new Date(utc).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'});
+}
+function fmtNum(n){ return (n===null||n===undefined||n==='') ? '-' : Number(n).toLocaleString('ko-KR'); }
+function fmtWon(n){ return (n===null||n===undefined||n==='') ? '-' : Number(n).toLocaleString('ko-KR')+'원'; }
+function fmtFollowers(n){
+  if(n===null||n===undefined||n==='') return '-';
+  n = Number(n);
+  if(n>=10000) return (n/10000).toFixed(1).replace(/\.0$/,'')+'만명';
+  return n.toLocaleString('ko-KR')+'명';
+}
+
+/* ── 필드(카테고리) 로드 ── */
+async function loadFields(){
+  const {data, error} = await sb.from('influencer_fields').select('*').order('sort_order');
+  if(error || !data) return;
+  fields = { categories: [] };
+  data.forEach(row => { if(row.field_key==='category') fields.categories.push(row.value); });
+}
+
+/* ── 인증 확인 ── */
+async function checkAuth(){
+  const {data:{session}} = await sb.auth.getSession();
+  if(!session){ window.location.href='../'; return; }
+  const {data:role} = await sb.from('user_roles').select('*').eq('user_id',session.user.id).single();
+  currentUserRole = role;
+  const name = role?.name || session.user.email.split('@')[0];
+  document.getElementById('s-avatar').textContent = name.charAt(0).toUpperCase();
+  document.getElementById('s-name').textContent = name;
+  document.getElementById('s-role').textContent = role?.role==='admin'?'관리자':role?.role==='part_leader'?'파트장':'일반 사용자';
+  await loadFields();
+  await loadInfs();
+  const hash = location.hash.replace('#','');
+  const valid = ['dashboard','search','list','register','fields'];
+  navigate(valid.includes(hash)?hash:'dashboard', false);
+}
+
+/* ── 인플루언서 로드 ── */
+async function loadInfs(){
+  try {
+    const {data, error} = await sb.from('influencers').select('*').order('created_at',{ascending:false});
+    if(error) throw error;
+    infs = (data||[]).map(r => ({...r, collabs: Array.isArray(r.collabs) ? r.collabs : (r.collabs ? JSON.parse(r.collabs) : [])}));
+  } catch(e){
+    console.error('인플루언서 로드 실패:', e);
+    infs = [];
+  }
+}
+
+/* ── 네비게이션 ── */
+const pageMeta = {
+  dashboard:['대시보드'],search:['AI 검색'],list:['필터 검색'],register:['인플루언서 등록'],fields:['카테고리 관리']
+};
+function navigate(page, push=true){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const nav = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if(nav) nav.classList.add('active');
+  document.getElementById('page-title').textContent = (pageMeta[page]||[''])[0];
+  if(push) history.pushState({page}, '', '#'+page);
+  if(page==='dashboard') renderDashboard();
+  if(page==='list'){ syncFilterSelects(); renderList(); }
+  if(page==='fields') renderFieldMgr();
+  if(page==='register') initForm();
+}
+window.addEventListener('popstate', e=>{
+  const page = (e.state && e.state.page) || 'dashboard';
+  navigate(page, false);
+});
+
+/* ── 대시보드 ── */
+function renderDashboard(){
+  const total = infs.length;
+  const withCollab = infs.filter(r=>(r.collabs||[]).length>0).length;
+  const avgFollowers = total ? Math.round(infs.reduce((s,r)=>s+(Number(r.followers)||0),0)/total) : 0;
+  const catCount = {};
+  infs.forEach(r=>{ const c=r.category||'미분류'; catCount[c]=(catCount[c]||0)+1; });
+
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon purple"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg></div><div class="stat-val">${total}</div><div class="stat-lbl">등록 인플루언서</div></div>
+    <div class="stat-card"><div class="stat-icon green"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 8l4 4 6-7"/></svg></div><div class="stat-val">${withCollab}</div><div class="stat-lbl">협업이력 보유</div></div>
+    <div class="stat-card"><div class="stat-icon amber"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg></div><div class="stat-val">${Object.keys(catCount).length}</div><div class="stat-lbl">운영중 카테고리</div></div>
+    <div class="stat-card"><div class="stat-icon blue"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12s2-4 6-4 6 4 6 4"/><circle cx="8" cy="5" r="2.5"/></svg></div><div class="stat-val">${fmtFollowers(avgFollowers)}</div><div class="stat-lbl">평균 팔로워</div></div>
+  `;
+
+  const genderCount = {};
+  infs.forEach(r=>{ const g=r.gender||'미입력'; genderCount[g]=(genderCount[g]||0)+1; });
+
+  const sortedCats = Object.entries(catCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxN = sortedCats.length ? sortedCats[0][1] : 1;
+  const sortedGenders = Object.entries(genderCount).sort((a,b)=>b[1]-a[1]);
+  const maxG = sortedGenders.length ? sortedGenders[0][1] : 1;
+  document.getElementById('dash-charts').innerHTML = `
+    <div class="surface"><div class="card-head"><span class="card-title">카테고리 분포</span></div><div class="card-body" id="dash-dist"></div></div>
+    <div class="surface"><div class="card-head"><span class="card-title">성별 분포</span></div><div class="card-body" id="dash-dist-gender"></div></div>
+  `;
+  document.getElementById('dash-dist').innerHTML = sortedCats.length ? sortedCats.map(([cat,n],i)=>`
+    <div class="dist-item">
+      <span class="dist-dot" style="background:${distColors[i%distColors.length]}"></span>
+      <span class="dist-lbl">${cat}</span>
+      <span class="dist-bar-w"><span class="dist-bar" style="width:${(n/maxN*100)}%;background:${distColors[i%distColors.length]}"></span></span>
+      <span class="dist-n">${n}</span>
+    </div>`).join('') : `<div style="font-size:12px;color:#9EA5B8">등록된 인플루언서가 없습니다.</div>`;
+  document.getElementById('dash-dist-gender').innerHTML = sortedGenders.length ? sortedGenders.map(([g,n],i)=>`
+    <div class="dist-item">
+      <span class="dist-dot" style="background:${distColors[i%distColors.length]}"></span>
+      <span class="dist-lbl">${g}</span>
+      <span class="dist-bar-w"><span class="dist-bar" style="width:${(n/maxG*100)}%;background:${distColors[i%distColors.length]}"></span></span>
+      <span class="dist-n">${n}</span>
+    </div>`).join('') : `<div style="font-size:12px;color:#9EA5B8">등록된 인플루언서가 없습니다.</div>`;
+
+  document.getElementById('dash-recent').innerHTML = infs.slice(0,8).map(r=>`
+    <tr style="cursor:pointer" onclick="openModal(${r.id})">
+      <td style="padding:9px 0;border-bottom:1px solid #E8EAF0;font-size:12px;font-weight:500">${r.name} ${r.category?`<span class="badge badge-purple" style="margin-left:4px">${r.category}</span>`:''}</td>
+      <td style="padding:9px 0;border-bottom:1px solid #E8EAF0;font-size:12px">${r.gender||'-'}</td>
+      <td style="padding:9px 0;border-bottom:1px solid #E8EAF0;font-size:12px">${fmtFollowers(r.followers)}</td>
+      <td style="padding:9px 0;border-bottom:1px solid #E8EAF0;font-size:12px">${(r.collabs||[]).length}건</td>
+      <td style="padding:9px 0;border-bottom:1px solid #E8EAF0;font-size:12px;color:#9EA5B8">${fmtDate(r.created_at)}</td>
+    </tr>`).join('') || `<tr><td colspan="5" style="padding:20px 0;text-align:center;font-size:12px;color:#9EA5B8">등록된 인플루언서가 없습니다.</td></tr>`;
+}
+
+/* ── AI 검색 ── */
+async function doSearch(){
+  const q = document.getElementById('search-q').value.trim();
+  if(!q) return;
+  const btn = document.getElementById('search-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 검색 중...';
+  document.getElementById('search-area').innerHTML = `<div class="loading-box"><div class="big-spinner"></div><div class="loading-txt">Claude가 인플루언서를 분석하는 중...</div></div>`;
+
+  const ctx = infs.map((r,i)=>{
+    const collabTxt = (r.collabs||[]).map(c=>`  - ${c.project||''}: ${c.content||''}`).join('\n');
+    return `[인플루언서 ${i+1}] ID:${r.id}
+이름: ${r.name} | 카테고리: ${r.category||''} | 성별: ${r.gender||''} | 연령: ${r.age||''}
+팔로워: ${r.followers||0} | 피드단가: ${r.feed_cost||''} | 릴스단가: ${r.reels_cost||''} | 2차활용: ${r.usage_cost||''}
+특이사항: ${r.notes||''}
+협업이력:
+${collabTxt || '  (없음)'}`;
+  }).join('\n\n---\n\n');
+
+  const prompt = `당신은 마케팅 에이전시의 인플루언서 매칭 AI입니다.
+
+[검색 요청]
+"${q}"
+
+[보유 인플루언서 목록]
+${ctx}
+
+검색 요청과 실제로 어울리는 인플루언서만 골라주세요. 관련 없으면 포함하지 마세요.
+
+반드시 아래 JSON 형식으로만 응답하세요. JSON 외에 다른 텍스트, 설명, 마크다운은 절대 포함하지 마세요:
+{
+  "results": [
+    {
+      "id": 인플루언서ID(숫자),
+      "feedback": "이 인플루언서의 핵심 특징을 1문장으로 요약한 뒤, 검색 요청과 어떻게 어울리는지 1~2문장으로 설명. 총 2~3문장."
+    }
+  ]
+}`;
+
+  try {
+    const res = await fetch('/.netlify/functions/claude2',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:prompt}]})
+    });
+    const raw = await res.json();
+    if(raw.error) throw new Error(raw.error);
+    const parsed = raw.result;
+    if(!parsed) throw new Error('검색 결과 없음');
+    const results = parsed.results||[];
+    if(!results.length){
+      document.getElementById('search-area').innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v3M11 14h.01"/></svg><p>검색 조건에 맞는 인플루언서가 없습니다.<br>다른 키워드로 다시 시도해보세요.</p></div>`;
+    } else {
+      document.getElementById('search-area').innerHTML = `
+        <div class="result-hd"><span><strong>${results.length}명</strong>의 인플루언서를 찾았습니다</span></div>
+        <div class="inf-grid">${results.map((res,i)=>{const inf=infs.find(r=>r.id===res.id);return inf?makeCardHTML(inf,i===0,res.feedback):'';}).join('')}</div>`;
+    }
+  } catch(e){
+    document.getElementById('search-area').innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><p style="color:#EF4444">오류가 발생했습니다.<br>${e.message||'잠시 후 다시 시도해주세요.'}</p></div>`;
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14"><path d="M10 2L6 8l4 6M6 8h6"/></svg> AI 검색';
+}
+
+/* ── 카드 HTML ── */
+function makeCardHTML(r, topMatch, aiFeedback){
+  const notesSnip = r.notes ? r.notes.slice(0,70).replace(/\n/g,' ')+(r.notes.length>70?'…':'') : '';
+  const collabN = (r.collabs||[]).length;
+  const aiFb = aiFeedback ? `<div class="ai-feedback"><div class="ai-feedback-head"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><path d="M10 2L6 8l4 6M6 8h6"/></svg>AI 매칭 이유</div><p>${aiFeedback}</p></div>` : '';
+  return `<div class="inf-card${topMatch?' top-match':''}" onclick="openModal(${r.id})">
+    <div class="ic-top">
+      <div class="ic-avatar">${(r.name||'?').charAt(0).toUpperCase()}</div>
+      <div>
+        <div class="ic-name">${r.name}</div>
+        <div class="ic-sub">${[r.gender,r.age?r.age+'세':''].filter(Boolean).join(' · ')||'-'}</div>
+      </div>
+    </div>
+    <div class="ic-badges">
+      ${r.category?`<span class="badge badge-purple">${r.category}</span>`:''}
+      <span class="badge badge-blue">팔로워 ${fmtFollowers(r.followers)}</span>
+      <span class="badge ${collabN?'badge-green':'badge-gray'}">협업 ${collabN}건</span>
+    </div>
+    <div class="ic-summary">
+      <div class="ic-sum-row"><span class="ic-sum-lbl">피드단가</span><span class="ic-sum-txt">${fmtWon(r.feed_cost)}</span></div>
+      ${notesSnip?`<div class="ic-sum-row"><span class="ic-sum-lbl">특이사항</span><span class="ic-sum-txt">${notesSnip}</span></div>`:''}
+    </div>
+    ${aiFb}
+    <div class="ic-foot"><span class="ic-meta">${fmtDate(r.created_at)}</span><button class="btn btn-sm" onclick="event.stopPropagation();openModal(${r.id})">상세보기</button></div>
+  </div>`;
+}
+
+/* ── 필터 검색 목록 ── */
+function syncFilterSelects(){
+  const s = document.getElementById('f-cat'); const v = s.value;
+  s.innerHTML = `<option value="">전체 카테고리</option>`;
+  fields.categories.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; s.appendChild(o); });
+  s.value = v;
+}
+function renderList(){
+  const q = (document.getElementById('list-q').value||'').toLowerCase();
+  const cat = document.getElementById('f-cat').value;
+  const gender = document.getElementById('list-gender').value;
+  const collab = document.getElementById('f-collab').value;
+  const fMin = document.getElementById('f-follow-min').value;
+  const fMax = document.getElementById('f-follow-max').value;
+  const bMin = document.getElementById('f-budget-min').value;
+  const bMax = document.getElementById('f-budget-max').value;
+
+  const filtered = infs.filter(r=>{
+    const text = [r.name, r.notes].filter(Boolean).join(' ').toLowerCase();
+    if(q && !text.includes(q)) return false;
+    if(cat && r.category!==cat) return false;
+    if(gender && r.gender!==gender) return false;
+    const collabN = (r.collabs||[]).length;
+    if(collab==='y' && collabN===0) return false;
+    if(collab==='n' && collabN>0) return false;
+    if(fMin!=='' && (r.followers===null||r.followers===undefined||Number(r.followers)<Number(fMin))) return false;
+    if(fMax!=='' && (r.followers===null||r.followers===undefined||Number(r.followers)>Number(fMax))) return false;
+    if(bMin!=='' && (r.feed_cost===null||r.feed_cost===undefined||Number(r.feed_cost)<Number(bMin))) return false;
+    if(bMax!=='' && (r.feed_cost===null||r.feed_cost===undefined||Number(r.feed_cost)>Number(bMax))) return false;
+    return true;
+  });
+  document.getElementById('list-count').textContent = filtered.length;
+  const grid = document.getElementById('list-grid');
+  grid.innerHTML = filtered.length ? filtered.map(r=>makeCardHTML(r,false,null)).join('') : `<div class="empty-state" style="grid-column:1/-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7H4a2 2 0 00-2 2v9a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 3H8v4h8V3z"/></svg><p>조건에 맞는 인플루언서가 없습니다.</p></div>`;
+}
+
+/* ── 상세 모달 ── */
+function openModal(id){
+  const r = infs.find(x=>x.id===id); if(!r) return;
+  document.getElementById('m-name').textContent = r.name;
+  document.getElementById('m-meta').textContent = [r.category, r.gender, r.age?r.age+'세':''].filter(Boolean).join(' · ');
+  const collabs = r.collabs||[];
+  const collabHtml = collabs.length ? collabs.map(c=>`
+    <div class="collab-item">
+      <div class="collab-item-title">${c.project||'(제목 없음)'}</div>
+      <div class="collab-item-body">${c.content||''}</div>
+      ${c.url?`<a href="${c.url}" target="_blank"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><path d="M6 2H2v12h12v-4M9 2h5v5M14 2L8 8"/></svg>참고 URL 보기</a>`:''}
+    </div>`).join('') : `<div style="font-size:12px;color:#9EA5B8">등록된 협업 이력이 없습니다.</div>`;
+  document.getElementById('m-body').innerHTML = `
+    <div class="m-sec"><div class="m-lbl">기본 정보</div>
+      <div class="m-grid2">
+        <div class="m-kv"><div class="m-kv-k">연락처</div><div class="m-kv-v">${r.contact||'-'}</div></div>
+        <div class="m-kv"><div class="m-kv-k">팔로워</div><div class="m-kv-v">${fmtFollowers(r.followers)}</div></div>
+      </div>
+      ${r.channel_url?`<div style="margin-top:8px"><a class="chan-link" href="${r.channel_url}" target="_blank"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><rect x="2" y="2" width="12" height="12" rx="3"/><circle cx="8" cy="8" r="2.6"/></svg>인스타그램 채널 열기</a></div>`:''}
+    </div>
+    <div class="m-sec"><div class="m-lbl">비용 정보</div>
+      <div class="m-grid2">
+        <div class="m-kv"><div class="m-kv-k">피드 제작비용</div><div class="m-kv-v">${fmtWon(r.feed_cost)}</div></div>
+        <div class="m-kv"><div class="m-kv-k">릴스 제작비용</div><div class="m-kv-v">${fmtWon(r.reels_cost)}</div></div>
+      </div>
+      <div class="m-kv" style="margin-top:8px"><div class="m-kv-k">2차활용 비용</div><div class="m-kv-v">${r.usage_cost||'-'}</div></div>
+    </div>
+    ${r.notes?`<div class="m-sec"><div class="m-lbl">특이사항</div><p class="m-txt">${r.notes}</p></div>`:''}
+    <div class="m-sec"><div class="m-lbl">협업 이력 (${collabs.length}건)</div><div class="collab-list">${collabHtml}</div></div>
+  `;
+  const ftEl = document.getElementById('modal-ft-btns');
+  const isAdmin = currentUserRole?.role === 'admin';
+  ftEl.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="editInf(${r.id})">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M11 2l3 3-8 8H3v-3L11 2z"/></svg> 수정
+    </button>
+    ${isAdmin ? `<button class="btn btn-sm" style="color:#EF4444;border-color:#fca5a5;background:#FEE2E2;" onclick="deleteInf(${r.id})">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M3 4h10M6 4V2h4v2M5 4v8h6V4"/></svg> 삭제
+    </button>` : ''}
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+
+/* ── 카테고리 즉시 추가 (등록 폼에서) ── */
+async function quickAddCategory(){
+  const val = prompt('추가할 카테고리명을 입력하세요:');
+  if(!val || !val.trim()) return;
+  const v = val.trim();
+  if(fields.categories.includes(v)){ showToast('이미 존재하는 카테고리입니다.'); return; }
+  const sortOrder = fields.categories.length + 1;
+  const {error} = await sb.from('influencer_fields').insert({field_key:'category', value:v, sort_order:sortOrder});
+  if(error){ showToast('추가 실패: '+error.message); return; }
+  fields.categories.push(v);
+  const sel = document.getElementById('f-category');
+  const o = document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); sel.value=v;
+  showToast(`'${v}' 카테고리가 추가되었습니다`);
+}
+
+/* ── 등록 폼 초기화 ── */
+function initForm(){
+  ['f-name','f-age','f-followers','f-contact','f-channel','f-feedcost','f-reelscost','f-usagecost','f-notes'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el){ el.value=''; el.dataset.editId=''; }
+  });
+  document.getElementById('f-gender').value='';
+  const pop = (id,arr) => { const s=document.getElementById(id); s.innerHTML=`<option value="">선택</option>`+arr.map(v=>`<option>${v}</option>`).join(''); };
+  pop('f-category', fields.categories);
+  document.getElementById('collab-rows').innerHTML = `<div class="collab-row"><input class="collab-project" type="text" placeholder="협업 프로젝트명"><textarea class="collab-content" rows="2" placeholder="협업 내용"></textarea><input class="collab-url" type="url" placeholder="참고 URL"><button class="collab-del" onclick="removeCollab(this)">✕</button></div>`;
+}
+function addCollab(){
+  const row = document.createElement('div'); row.className='collab-row';
+  row.innerHTML = `<input class="collab-project" type="text" placeholder="협업 프로젝트명"><textarea class="collab-content" rows="2" placeholder="협업 내용"></textarea><input class="collab-url" type="url" placeholder="참고 URL"><button class="collab-del" onclick="removeCollab(this)">✕</button>`;
+  document.getElementById('collab-rows').appendChild(row);
+}
+function removeCollab(btn){ const rows=document.getElementById('collab-rows'); if(rows.querySelectorAll('.collab-row').length>1) btn.closest('.collab-row').remove(); }
+
+function collectCollabs(){
+  const rows = document.querySelectorAll('.collab-row');
+  const out = [];
+  rows.forEach(row=>{
+    const project = row.querySelector('.collab-project').value.trim();
+    const content = row.querySelector('.collab-content').value.trim();
+    const url = row.querySelector('.collab-url').value.trim();
+    if(project || content || url) out.push({project, content, url});
+  });
+  return out;
+}
+
+async function submitForm(){
+  const editId = document.getElementById('f-name').dataset.editId;
+  const name = document.getElementById('f-name').value.trim();
+  const category = document.getElementById('f-category').value;
+  const channel = document.getElementById('f-channel').value.trim();
+  if(!name || !category || !channel){ alert('이름, 카테고리, 인스타그램 채널 URL은 필수입니다.'); return; }
+
+  const payload = {
+    name, category,
+    gender: document.getElementById('f-gender').value || null,
+    age: document.getElementById('f-age').value ? parseInt(document.getElementById('f-age').value) : null,
+    followers: document.getElementById('f-followers').value ? parseInt(document.getElementById('f-followers').value) : null,
+    contact: document.getElementById('f-contact').value.trim() || null,
+    channel_url: channel,
+    feed_cost: document.getElementById('f-feedcost').value ? parseInt(document.getElementById('f-feedcost').value) : null,
+    reels_cost: document.getElementById('f-reelscost').value ? parseInt(document.getElementById('f-reelscost').value) : null,
+    usage_cost: document.getElementById('f-usagecost').value.trim() || null,
+    notes: document.getElementById('f-notes').value.trim() || null,
+    collabs: collectCollabs(),
+  };
+
+  if(editId && editId!==''){
+    const {error} = await sb.from('influencers').update(payload).eq('id', parseInt(editId));
+    if(error){ alert('수정 실패: '+error.message); return; }
+    await loadInfs();
+    showToast('수정되었습니다!');
+    navigate('list');
+    return;
+  }
+
+  const {error} = await sb.from('influencers').insert([payload]);
+  if(error){ alert('저장 실패: '+error.message); return; }
+  await loadInfs();
+  showToast('인플루언서가 등록되었습니다!');
+  navigate('list');
+}
+
+function editInf(id){
+  const r = infs.find(x=>x.id===id);
+  if(!r) return;
+  closeModal();
+  navigate('register');
+  setTimeout(()=>{
+    document.getElementById('f-name').value = r.name || '';
+    document.getElementById('f-gender').value = r.gender || '';
+    document.getElementById('f-age').value = r.age || '';
+    document.getElementById('f-followers').value = r.followers || '';
+    document.getElementById('f-contact').value = r.contact || '';
+    document.getElementById('f-channel').value = r.channel_url || '';
+    document.getElementById('f-feedcost').value = r.feed_cost || '';
+    document.getElementById('f-reelscost').value = r.reels_cost || '';
+    document.getElementById('f-usagecost').value = r.usage_cost || '';
+    document.getElementById('f-notes').value = r.notes || '';
+    const sel = document.getElementById('f-category');
+    for(let o of sel.options){ if(o.value===r.category||o.text===r.category){ sel.value=o.value; break; } }
+    const rows = document.getElementById('collab-rows');
+    rows.innerHTML = '';
+    const collabs = (r.collabs&&r.collabs.length) ? r.collabs : [{project:'',content:'',url:''}];
+    collabs.forEach(c=>{
+      const row = document.createElement('div'); row.className='collab-row';
+      row.innerHTML = `<input class="collab-project" type="text" placeholder="협업 프로젝트명" value="${c.project||''}"><textarea class="collab-content" rows="2" placeholder="협업 내용">${c.content||''}</textarea><input class="collab-url" type="url" placeholder="참고 URL" value="${c.url||''}"><button class="collab-del" onclick="removeCollab(this)">✕</button>`;
+      rows.appendChild(row);
+    });
+    document.getElementById('f-name').dataset.editId = r.id;
+  }, 100);
+}
+
+async function deleteInf(id){
+  if(!confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+  const {error} = await sb.from('influencers').delete().eq('id', id);
+  if(error){ alert('삭제 실패: '+error.message); return; }
+  infs = infs.filter(r=>r.id!==id);
+  closeModal();
+  showToast('삭제되었습니다');
+  renderDashboard();
+}
+
+/* ── 카테고리 관리 페이지 ── */
+function renderFieldMgr(){
+  document.getElementById('fmgr-grid').innerHTML = `
+    <div class="fmgr-group">
+      <div class="fmgr-head"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="15" height="15"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>카테고리</div>
+      <div class="fmgr-items" id="fi-category"></div>
+      <div class="fmgr-add"><input type="text" id="fa-category" placeholder="새 카테고리 입력..." onkeydown="if(event.key==='Enter')addField()"><button class="btn btn-primary btn-sm" onclick="addField()">추가</button></div>
+    </div>`;
+  renderFieldItems();
+}
+function renderFieldItems(){
+  const el = document.getElementById('fi-category'); if(!el) return;
+  el.innerHTML = fields.categories.map((v,i)=>`
+    <div class="fmgr-item" id="fmgr-item-${i}">
+      <span class="fmgr-item-text" id="fmgr-text-${i}">${v}</span>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button class="fmgr-edit-btn" onclick="startEditField(${i})" title="수정">✎</button>
+        <button class="fmgr-del" onclick="delField(${i})" title="삭제">✕</button>
+      </div>
+    </div>`).join('') || `<div style="padding:10px 12px;font-size:13px;color:#9EA5B8">항목 없음</div>`;
+}
+function startEditField(idx){
+  const item = document.getElementById(`fmgr-item-${idx}`);
+  const curVal = fields.categories[idx];
+  item.innerHTML = `
+    <input type="text" value="${curVal}" id="fedit-${idx}"
+      style="flex:1;padding:5px 8px;border:1px solid #6C63FF;border-radius:6px;font-size:13px;font-family:inherit;background:#fff;color:#1A1D27;"
+      onkeydown="if(event.key==='Enter')saveEditField(${idx});if(event.key==='Escape')renderFieldItems()" />
+    <div style="display:flex;gap:4px;flex-shrink:0;">
+      <button class="fmgr-edit-btn" onclick="saveEditField(${idx})" style="color:#6C63FF" title="저장">✓</button>
+      <button class="fmgr-del" onclick="renderFieldItems()" title="취소">✕</button>
+    </div>`;
+  document.getElementById(`fedit-${idx}`).focus();
+}
+async function saveEditField(idx){
+  const input = document.getElementById(`fedit-${idx}`);
+  const newVal = input.value.trim();
+  const oldVal = fields.categories[idx];
+  if(!newVal || newVal===oldVal){ renderFieldItems(); return; }
+  if(fields.categories.includes(newVal)){ showToast('이미 존재하는 카테고리입니다.'); return; }
+  const {error} = await sb.from('influencer_fields').update({value:newVal}).eq('field_key','category').eq('value',oldVal);
+  if(error){ showToast('수정 실패: '+error.message); return; }
+  fields.categories[idx] = newVal;
+  renderFieldItems();
+  showToast(`'${oldVal}' → '${newVal}' 수정되었습니다`);
+}
+async function addField(){
+  const inp = document.getElementById('fa-category');
+  const val = inp.value.trim();
+  if(!val || fields.categories.includes(val)){ inp.value=''; return; }
+  const sortOrder = fields.categories.length + 1;
+  const {error} = await sb.from('influencer_fields').insert({field_key:'category', value:val, sort_order:sortOrder});
+  if(error){ showToast('저장 실패: '+error.message); return; }
+  fields.categories.push(val);
+  inp.value='';
+  renderFieldItems();
+  showToast(`'${val}' 추가되었습니다`);
+}
+async function delField(idx){
+  const val = fields.categories[idx];
+  const {error} = await sb.from('influencer_fields').delete().eq('field_key','category').eq('value',val);
+  if(error){ showToast('삭제 실패: '+error.message); return; }
+  fields.categories.splice(idx,1);
+  renderFieldItems();
+  showToast(`'${val}' 삭제되었습니다`);
+}
+
+/* ── 유틸 ── */
+function showToast(msg){
+  const el=document.getElementById('toast'); document.getElementById('toast-msg').textContent=msg;
+  el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2800);
+}
+function goHome(){
+  if(document.referrer && !document.referrer.endsWith(window.location.pathname)){ history.back(); }
+  else { window.location.href='../'; }
+}
+
+/* ── 시작 ── */
+checkAuth();
+</script>
+</body>
+</html>
