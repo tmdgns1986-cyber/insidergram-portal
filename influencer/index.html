@@ -116,9 +116,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ir-sub{font-size:11px;color:#9EA5B8;margin-top:2px}
 .ir-badges{display:flex;gap:5px;flex-wrap:wrap;width:230px;flex-shrink:0}
 .ir-notes{flex:1;min-width:120px;font-size:12px;color:#6B7080;line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ir-cost{width:100px;flex-shrink:0;text-align:right}
+.ir-select{flex-shrink:0;width:16px;height:16px;cursor:pointer;accent-color:#6C63FF}
+.ir-costs{display:flex;gap:14px;flex-shrink:0}
+.ir-cost{width:78px;flex-shrink:0;text-align:right}
 .ir-cost-label{font-size:9px;color:#9EA5B8}
-.ir-cost-val{font-size:13px;font-weight:600;color:#1A1D27}
+.ir-cost-val{font-size:12px;font-weight:600;color:#1A1D27;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ir-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .ir-date{font-size:11px;color:#9EA5B8;white-space:nowrap}
 .ir-ai{background:#EEF0FF;border-top:1px solid #C7C4FF;padding:10px 18px;font-size:12px;color:#3730a3;line-height:1.6}
@@ -363,6 +365,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             피드단가 <input type="number" id="f-budget-min" placeholder="최소" oninput="renderList()"> ~ <input type="number" id="f-budget-max" placeholder="최대" oninput="renderList()">
           </div>
           <span class="fb-count">총 <strong id="list-count">0</strong>명</span>
+          <button class="btn btn-sm dl-select-btn" onclick="downloadSelectedExcel()" disabled>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M8 2v9M4.5 8L8 11.5 11.5 8"/><path d="M2 13h12"/></svg>
+            선택 엑셀 다운로드 (<span class="sel-count">0</span>)
+          </button>
         </div>
         <div class="inf-list" id="list-grid"></div>
       </div>
@@ -529,6 +535,9 @@ let infs = [];
 /* ── 엑셀 일괄 등록 상태 ── */
 let excelRows = [];
 
+/* ── 선택된 인플루언서(엑셀 다운로드용) ── */
+let selectedIds = new Set();
+
 const distColors = ['#6C63FF','#22C55E','#F59E0B','#3B82F6','#EC4899','#94A3B8','#A855F7','#14B8A6'];
 
 /* ── 포맷 유틸 ── */
@@ -596,7 +605,7 @@ function navigate(page, push=true){
   document.getElementById('page-title').textContent = (pageMeta[page]||[''])[0];
   if(push) history.pushState({page}, '', '#'+page);
   if(page==='dashboard') renderDashboard();
-  if(page==='list'){ syncFilterSelects(); renderList(); }
+  if(page==='list'){ syncFilterSelects(); renderList(); updateSelectionUI(); }
   if(page==='fields') renderFieldMgr();
   if(page==='register') initForm();
 }
@@ -710,8 +719,14 @@ ${ctx}
       document.getElementById('search-area').innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v3M11 14h.01"/></svg><p>검색 조건에 맞는 인플루언서가 없습니다.<br>다른 키워드로 다시 시도해보세요.</p></div>`;
     } else {
       document.getElementById('search-area').innerHTML = `
-        <div class="result-hd"><span><strong>${results.length}명</strong>의 인플루언서를 찾았습니다</span></div>
+        <div class="result-hd"><span><strong>${results.length}명</strong>의 인플루언서를 찾았습니다</span>
+          <button class="btn btn-sm dl-select-btn" onclick="downloadSelectedExcel()" disabled>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="13" height="13"><path d="M8 2v9M4.5 8L8 11.5 11.5 8"/><path d="M2 13h12"/></svg>
+            선택 엑셀 다운로드 (<span class="sel-count">0</span>)
+          </button>
+        </div>
         <div class="inf-list">${results.map((res,i)=>{const inf=infs.find(r=>r.id===res.id);return inf?makeCardHTML(inf,i===0,res.feedback):'';}).join('')}</div>`;
+      updateSelectionUI();
     }
   } catch(e){
     document.getElementById('search-area').innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><p style="color:#EF4444">오류가 발생했습니다.<br>${e.message||'잠시 후 다시 시도해주세요.'}</p></div>`;
@@ -727,6 +742,7 @@ function makeCardHTML(r, topMatch, aiFeedback){
   const aiFb = aiFeedback ? `<div class="ir-ai"><strong>AI 매칭 이유 ·</strong> ${aiFeedback}</div>` : '';
   return `<div class="inf-row${topMatch?' top-match':''}" onclick="openModal(${r.id})">
     <div class="ir-main">
+      <input type="checkbox" class="ir-select" data-id="${r.id}" ${selectedIds.has(r.id)?'checked':''} onclick="event.stopPropagation()" onchange="toggleSelect(${r.id})">
       <div class="ir-avatar">${(r.name||'?').charAt(0).toUpperCase()}</div>
       <div class="ir-identity">
         <div class="ir-name">${r.name}</div>
@@ -738,17 +754,42 @@ function makeCardHTML(r, topMatch, aiFeedback){
         <span class="badge ${collabN?'badge-green':'badge-gray'}">협업 ${collabN}건</span>
       </div>
       <div class="ir-notes">${notesSnip}</div>
-      <div class="ir-cost">
-        <div class="ir-cost-label">피드단가</div>
-        <div class="ir-cost-val">${fmtWon(r.feed_cost)}</div>
+      <div class="ir-costs">
+        <div class="ir-cost"><div class="ir-cost-label">피드</div><div class="ir-cost-val">${fmtWon(r.feed_cost)}</div></div>
+        <div class="ir-cost"><div class="ir-cost-label">릴스</div><div class="ir-cost-val">${fmtWon(r.reels_cost)}</div></div>
+        <div class="ir-cost"><div class="ir-cost-label">2차활용</div><div class="ir-cost-val" title="${r.usage_cost||''}">${r.usage_cost||'-'}</div></div>
       </div>
       <div class="ir-actions">
         <span class="ir-date">${fmtDate(r.created_at)}</span>
+        ${r.channel_url?`<button class="btn btn-sm" onclick="event.stopPropagation();window.open('${r.channel_url}','_blank')">채널보기</button>`:''}
         <button class="btn btn-sm" onclick="event.stopPropagation();openModal(${r.id})">상세보기</button>
       </div>
     </div>
     ${aiFb}
   </div>`;
+}
+
+/* ── 선택 항목 엑셀 다운로드 ── */
+function toggleSelect(id){
+  if(selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  updateSelectionUI();
+}
+function updateSelectionUI(){
+  document.querySelectorAll('.sel-count').forEach(el=>el.textContent = selectedIds.size);
+  document.querySelectorAll('.dl-select-btn').forEach(btn=>btn.disabled = selectedIds.size===0);
+}
+function downloadSelectedExcel(){
+  const rows = infs.filter(r=>selectedIds.has(r.id));
+  if(!rows.length) return;
+  const headers = ['이름','카테고리','성별','연령','피드제작비용','릴스제작비용','2차활용비용','채널URL'];
+  const data = rows.map(r=>[r.name, r.category||'', r.gender||'', r.age||'', r.feed_cost||'', r.reels_cost||'', r.usage_cost||'', r.channel_url||'']);
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  ws['!cols'] = headers.map(()=>({wch:16}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '인플루언서');
+  const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb, `인플루언서_선택다운로드_${today}.xlsx`);
 }
 
 /* ── 필터 검색 목록 ── */
