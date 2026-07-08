@@ -201,6 +201,9 @@ function migrateAccounts(){
       if(!r.insights){ r.insights = { monthlyStats:'', viewTrend:'', demographics:'', inflow:'', popularRank:'' }; changed = true; }
       if(!r.insightsEdited){ r.insightsEdited = { monthlyStats:false, viewTrend:false, demographics:false, inflow:false, popularRank:false }; changed = true; }
       if(!r.keywordExposure){ r.keywordExposure = { rows:[blankKeywordRow()], images:[] }; changed = true; }
+      if(r.planEnabled === undefined){ r.planEnabled = false; changed = true; }
+      if(r.planMonth === undefined){ r.planMonth = ''; changed = true; }
+      if(!r.planCalendar){ r.planCalendar = { rows: [] }; changed = true; }
     });
     if(!Array.isArray(a.instagramReports)){ a.instagramReports = []; changed = true; }
     if(!a.igHistory){ a.igHistory = { followers:{}, reach:{}, impressions:{} }; changed = true; }
@@ -281,6 +284,9 @@ function newBlogReport(workManager){
     popularRank: { rows: [] },
     posts: [ blankPostRow() ],
     keywordExposure: { rows: [ blankKeywordRow() ], images: [] },
+    planEnabled: false,
+    planMonth: '',
+    planCalendar: { rows: [] },
     importedFlags: { views:false, visitors:false, demographics:false, inflow:false, popularRank:false },
     insights: { monthlyStats:'', viewTrend:'', demographics:'', inflow:'', popularRank:'' },
     insightsEdited: { monthlyStats:false, viewTrend:false, demographics:false, inflow:false, popularRank:false },
@@ -966,6 +972,32 @@ function renderBlogReportPage(a){
               <button class="btn btn-sm btn-danger" style="position:absolute;top:4px;right:4px;padding:2px 6px" onclick="removeKeywordImage('${a.id}','${im.id}')">✕</button>
             </div>`).join('') || `<div style="font-size:11px;color:#9EA5B8">아직 첨부한 이미지가 없습니다.</div>`}
         </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <span class="card-title">🗓 다음 달 콘텐츠 Plan (선택사항)</span>
+      </div>
+      <div class="card-body">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;margin-bottom:10px">
+          <input type="checkbox" ${br.planEnabled?'checked':''} onchange="updateBlogPlanEnabled('${a.id}',this.checked)">
+          이 보고서에 다음 달 콘텐츠 Plan 캘린더 포함하기
+        </label>
+        ${br.planEnabled ? `
+        <div class="field" style="max-width:220px;margin-bottom:12px"><label>Plan 대상월</label><input type="month" value="${esc(br.planMonth)}" onchange="updateBlogPlanMonth('${a.id}',this.value)"></div>
+        <table class="mini-table">
+          <thead><tr><th style="width:20%">날짜</th><th>콘텐츠 주제</th><th></th></tr></thead>
+          <tbody>${br.planCalendar.rows.map(r=>`
+            <tr>
+              <td><input type="date" value="${esc(r.date)}" ${br.planMonth?`min="${br.planMonth}-01"`:''} onchange="updateBlogPlanRow('${a.id}','${r.id}','date',this.value)"></td>
+              <td><input value="${esc(r.text)}" placeholder="콘텐츠 주제" onchange="updateBlogPlanRow('${a.id}','${r.id}','text',this.value)"></td>
+              <td><button class="btn btn-sm btn-danger" onclick="removeBlogPlanRow('${a.id}','${r.id}')">✕</button></td>
+            </tr>`).join('')}</tbody>
+        </table>
+        <button class="add-row-btn" onclick="addBlogPlanRow('${a.id}')">+ 일정 행 추가</button>
+        <div style="font-size:11px;color:#9EA5B8;margin-top:6px">날짜에 맞춰 실제 요일별 달력으로 자동 배치돼요.</div>
+        ` : `<div style="font-size:11px;color:#9EA5B8">체크하지 않으면 이 보고서에는 Plan 페이지가 들어가지 않아요.</div>`}
       </div>
     </div>
 
@@ -1945,6 +1977,51 @@ function removeKeywordImage(accountId, imageId){
   touchReport(br);
   saveState();
   render();
+}
+function updateBlogPlanEnabled(accountId, checked){
+  const a = accounts.find(x=>x.id===accountId);
+  const br = getCurrentReport(a);
+  if(!br) return;
+  br.planEnabled = checked;
+  touchReport(br);
+  saveState();
+  render();
+}
+function updateBlogPlanMonth(accountId, value){
+  const a = accounts.find(x=>x.id===accountId);
+  const br = getCurrentReport(a);
+  if(!br) return;
+  br.planMonth = value;
+  touchReport(br);
+  saveState();
+  render();
+}
+function addBlogPlanRow(accountId){
+  const a = accounts.find(x=>x.id===accountId);
+  const br = getCurrentReport(a);
+  if(!br) return;
+  br.planCalendar.rows.push(blankPlanRow());
+  touchReport(br);
+  saveState();
+  render();
+}
+function removeBlogPlanRow(accountId, rowId){
+  const a = accounts.find(x=>x.id===accountId);
+  const br = getCurrentReport(a);
+  if(!br) return;
+  br.planCalendar.rows = br.planCalendar.rows.filter(r=>r.id!==rowId);
+  touchReport(br);
+  saveState();
+  render();
+}
+function updateBlogPlanRow(accountId, rowId, key, value){
+  const a = accounts.find(x=>x.id===accountId);
+  const br = getCurrentReport(a);
+  if(!br) return;
+  const row = br.planCalendar.rows.find(r=>r.id===rowId);
+  if(row) row[key] = value;
+  touchReport(br);
+  saveState();
 }
 function updateMonthlyStat(accountId, index, key, value){
   const a = accounts.find(x=>x.id===accountId);
@@ -2991,6 +3068,13 @@ async function exportOtherPDF(accountId, reportId, statusElId){
   }
 }
 
+function block_blogPlanCalendar(br){
+  if(!br.planEnabled || !br.planMonth) return null;
+  const grid = buildCalendarGridHtml(br.planMonth, br.planCalendar.rows);
+  const html = sectionHeader(`${monthLabel(br.planMonth)} 콘텐츠 Plan`,'igPlan') + (grid || emptyMsg());
+  return {type:'atomic', html};
+}
+
 async function buildAllSlides(account, reportId){
   const br = account.blogReports.find(r=>r.id===reportId);
   if(!br) return [];
@@ -3014,6 +3098,11 @@ async function buildAllSlides(account, reportId){
     flow.forceNewPage();
     flow.addTable(block_keywordExposureTable(meta, br));
     block_keywordExposureImages(br).forEach(b => flow.addAtomic(b.html));
+    const planBlock = block_blogPlanCalendar(br);
+    if(planBlock){
+      flow.forceNewPage();
+      flow.addAtomic(planBlock.html);
+    }
     slides = slides.concat(flow.finish(meta));
   } finally {
     document.body.removeChild(measureEl);
