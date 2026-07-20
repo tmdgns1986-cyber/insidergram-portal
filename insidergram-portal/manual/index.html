@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>업무 매뉴얼 — 인사이더그램 컴퍼니</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+function toKSTDate(ts){
+  if(!ts) return '-';
+  return new Date(ts).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'});
+}
+function toKSTDateTime(ts){
+  if(!ts) return '-';
+  return new Date(ts).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
+}
+function toKSTTimeAgo(ts){
+  if(!ts) return '-';
+  const diff=(Date.now()-new Date(ts))/1000;
+  if(diff<60) return '방금 전';
+  if(diff<3600) return Math.floor(diff/60)+'분 전';
+  if(diff<86400) return Math.floor(diff/3600)+'시간 전';
+  return toKSTDate(ts);
+}
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F5F3;color:#1a1a1a;font-size:14px}
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:240px;background:#fff;border-right:1px solid #E8E8E5;display:flex;flex-direction:column;flex-shrink:0}
+#logo{padding:16px 18px;border-bottom:1px solid #E8E8E5;cursor:pointer;transition:background .15s}
+#logo:hover{background:#F5F5F3}
+.logo-back{font-size:11px;color:#2563EB;margin-bottom:5px}
+.logo-title{font-size:13px;font-weight:700}
+.logo-sub{font-size:11px;color:#999;margin-top:2px}
+.nav-wrap{flex:1;overflow-y:auto;padding:10px 0}
+.nav-label{font-size:10px;font-weight:600;color:#bbb;text-transform:uppercase;letter-spacing:.08em;padding:0 18px;margin-bottom:4px}
+.nav-group{margin-bottom:2px}
+.nav-group-header{display:flex;align-items:center;justify-content:space-between;padding:8px 18px;cursor:pointer;color:#444;font-size:12px;font-weight:600;transition:all .15s;user-select:none}
+.nav-group-header:hover{background:#F5F5F3;color:#1a1a1a}
+.nav-group-left{display:flex;align-items:center;gap:8px}
+.nav-group-left svg{width:14px;height:14px;color:#888;flex-shrink:0}
+.nav-group-arrow{width:12px;height:12px;color:#bbb;transition:transform .2s}
+.nav-group-arrow.closed{transform:rotate(-90deg)}
+.nav-cat-list{overflow:hidden}
+.nav-cat{display:flex;align-items:center;gap:8px;padding:7px 18px 7px 32px;cursor:pointer;color:#666;font-size:12px;border-left:2px solid transparent;transition:all .15s}
+.nav-cat:hover{background:#F5F5F3;color:#1a1a1a}
+.nav-cat.active{background:#EEF4FF;color:#2563EB;border-left-color:#2563EB;font-weight:500}
+.nav-cat svg{width:13px;height:13px;flex-shrink:0}
+.nav-add-btn{margin:8px 12px;padding:7px;border:1px dashed #E0E0DC;border-radius:8px;background:none;font-size:11px;color:#bbb;cursor:pointer;width:calc(100% - 24px);text-align:center;font-family:inherit;transition:all .15s}
+.nav-add-btn:hover{background:#F5F5F3;color:#999;border-color:#ccc}
+#sidebar-footer{padding:12px 18px;border-top:1px solid #E8E8E5}
+.user-chip{display:flex;align-items:center;gap:8px}
+.user-av{width:28px;height:28px;border-radius:50%;background:#EEF4FF;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#2563EB;flex-shrink:0}
+.u-name{font-size:12px;font-weight:500}
+.u-role{font-size:10px;color:#999;margin-top:1px}
+.home-btn{margin-top:8px;width:100%;padding:6px;background:#F5F5F3;border:1px solid #E0E0DC;border-radius:8px;font-size:11px;cursor:pointer;font-family:inherit;color:#666;transition:all .15s}
+.home-btn:hover{background:#EEF4FF;color:#2563EB;border-color:#2563EB}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{height:54px;background:#fff;border-bottom:1px solid #E8E8E5;display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0}
+#topbar h1{font-size:15px;font-weight:600;flex:1}
+.search-wrap{position:relative;width:220px}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#bbb;pointer-events:none}
+.search-wrap input{width:100%;padding:7px 10px 7px 30px;border:1px solid #E0E0DC;border-radius:8px;font-size:12px;font-family:inherit;color:#1a1a1a;background:#fff;outline:none}
+.search-wrap input:focus{border-color:#2563EB}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border:1px solid #E0E0DC;border-radius:8px;background:#fff;color:#555;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.btn:hover{background:#F5F5F3}
+.btn-primary{background:#2563EB;border-color:#2563EB;color:#fff;font-weight:500}
+.btn-primary:hover{background:#1d4ed8}
+.btn-danger{background:#FEE2E2;border-color:#FECACA;color:#DC2626}
+.btn-danger:hover{border-color:#DC2626}
+.btn svg{width:13px;height:13px}
+#content{flex:1;overflow-y:auto;padding:22px 26px}
+.page{display:none}.page.active{display:block}
+
+/* 게시판 목록 */
+.board-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.board-title-text{font-size:15px;font-weight:600}
+.board-sub{font-size:12px;color:#999;margin-bottom:14px}
+.board-wrap{background:#fff;border:1px solid #E8E8E5;border-radius:10px;overflow:hidden;margin-bottom:16px}
+.board-thead{display:grid;grid-template-columns:56px 1fr 80px 90px 56px;padding:9px 16px;background:#FAFAF8;border-bottom:1px solid #E8E8E5;font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.04em}
+.board-row{display:grid;grid-template-columns:56px 1fr 80px 90px 56px;padding:12px 16px;border-bottom:1px solid #F5F5F3;cursor:pointer;transition:background .1s;align-items:center}
+.board-row:last-child{border-bottom:none}
+.board-row:hover{background:#FAFAF8}
+.board-num{font-size:12px;color:#bbb;text-align:center}
+.board-title-cell{display:flex;align-items:center;gap:8px;min-width:0}
+.board-title-main{font-size:13px;font-weight:500;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board-cat-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;background:#EEF4FF;color:#2563EB;white-space:nowrap;flex-shrink:0}
+.new-badge{font-size:9px;font-weight:700;background:#DBEAFE;color:#1d4ed8;padding:1px 5px;border-radius:4px;flex-shrink:0}
+.board-author{font-size:12px;color:#888;text-align:center}
+.board-date{font-size:11px;color:#bbb;text-align:center}
+.board-views{display:flex;align-items:center;justify-content:center;gap:3px;font-size:11px;color:#bbb}
+.board-views svg{width:11px;height:11px}
+.board-empty{text-align:center;padding:48px;color:#bbb;font-size:13px}
+.page-wrap{display:flex;align-items:center;justify-content:center;gap:4px}
+.page-btn{width:28px;height:28px;border:1px solid #E8E8E5;border-radius:6px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;color:#666;transition:all .15s}
+.page-btn:hover{background:#F5F5F3}
+.page-btn.active{background:#2563EB;border-color:#2563EB;color:#fff;font-weight:500}
+.page-btn svg{width:11px;height:11px}
+
+/* 상세 보기 */
+.detail-wrap{background:#fff;border:1px solid #E8E8E5;border-radius:10px;overflow:hidden}
+.detail-head{padding:20px 24px;border-bottom:1px solid #F0F0EC}
+.detail-cat-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:#EEF4FF;color:#2563EB;margin-bottom:8px}
+.detail-title{font-size:18px;font-weight:600;margin-bottom:10px;line-height:1.4}
+.detail-meta{display:flex;align-items:center;gap:14px;font-size:11px;color:#bbb;flex-wrap:wrap}
+.detail-meta-item{display:flex;align-items:center;gap:4px}
+.detail-meta-item svg{width:12px;height:12px}
+.detail-body{padding:22px 24px;font-size:14px;color:#333;line-height:1.9;min-height:200px}
+.detail-body h1{font-size:20px;font-weight:600;margin:20px 0 10px;color:#1a1a1a}
+.detail-body h2{font-size:17px;font-weight:600;margin:18px 0 8px;color:#1a1a1a}
+.detail-body h3{font-size:15px;font-weight:600;margin:16px 0 6px;color:#1a1a1a}
+.detail-body p{margin-bottom:12px}
+.detail-body ul,.detail-body ol{padding-left:22px;margin-bottom:12px}
+.detail-body li{margin-bottom:5px}
+.detail-body img{max-width:100%;border-radius:8px;border:1px solid #E8E8E5;margin:12px 0;display:block}
+.detail-body strong{font-weight:600;color:#1a1a1a}
+.detail-body a{color:#2563EB;text-decoration:none}
+.detail-body a:hover{text-decoration:underline}
+.detail-body blockquote{border-left:3px solid #2563EB;padding:10px 14px;background:#EEF4FF;border-radius:0 8px 8px 0;margin:12px 0;font-size:13px;color:#555}
+.detail-body hr{border:none;border-top:1px solid #E8E8E5;margin:16px 0}
+.detail-body pre{background:#F5F5F3;border:1px solid #E8E8E5;border-radius:8px;padding:12px;font-family:monospace;font-size:12px;overflow-x:auto;margin-bottom:12px}
+.detail-footer{padding:14px 24px;border-top:1px solid #F0F0EC;display:flex;align-items:center;justify-content:space-between}
+.back-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#888;cursor:pointer;background:none;border:none;font-family:inherit;padding:0;transition:color .15s}
+.back-btn:hover{color:#1a1a1a}
+.back-btn svg{width:13px;height:13px}
+
+/* 등록/수정 폼 */
+.write-wrap{background:#fff;border:1px solid #E8E8E5;border-radius:10px;overflow:hidden}
+.write-head{padding:16px 24px;border-bottom:1px solid #F0F0EC;font-size:14px;font-weight:600}
+.write-body{padding:22px 24px}
+.form-row{margin-bottom:16px}
+.form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-label{font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;display:block}
+.form-input,.form-select{width:100%;padding:9px 12px;border:1px solid #E0E0DC;border-radius:8px;font-size:13px;font-family:inherit;color:#1a1a1a;background:#fff;outline:none;transition:border-color .15s}
+.form-input:focus,.form-select:focus{border-color:#2563EB;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.req{color:#DC2626}
+.editor-wrap{border:1px solid #E0E0DC;border-radius:8px;overflow:hidden;transition:border-color .15s}
+.editor-wrap:focus-within{border-color:#2563EB;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.editor-toolbar{display:flex;align-items:center;gap:2px;padding:7px 8px;background:#FAFAF8;border-bottom:1px solid #E8E8E5;flex-wrap:wrap}
+.tool-btn{padding:4px 8px;border:none;background:none;border-radius:5px;cursor:pointer;font-size:12px;color:#555;font-family:inherit;display:inline-flex;align-items:center;gap:3px;transition:background .1s;line-height:1}
+.tool-btn:hover{background:#F0F0EC}
+.tool-btn svg{width:13px;height:13px}
+.tool-sep{width:1px;height:18px;background:#E8E8E5;margin:0 3px;flex-shrink:0}
+.editor-area{min-height:200px;padding:14px;font-size:13px;color:#333;line-height:1.8;outline:none;font-family:inherit}
+.editor-area:empty:before{content:attr(data-placeholder);color:#bbb}
+.editor-area h1{font-size:20px;font-weight:600;margin:8px 0 6px}
+.editor-area h2{font-size:17px;font-weight:600;margin:8px 0 5px}
+.editor-area h3{font-size:15px;font-weight:600;margin:8px 0 4px}
+.editor-area p{margin-bottom:8px}
+.editor-area ul,.editor-area ol{padding-left:20px;margin-bottom:8px}
+.editor-area img{max-width:100%;border-radius:6px;margin:8px 0;cursor:pointer;display:inline-block}
+.editor-area img.selected{outline:2px solid #2563EB;outline-offset:2px}
+.img-resize-wrap{position:relative;display:inline-block;margin:8px 0}
+.img-resize-wrap img{display:block;border-radius:6px}
+.img-resize-wrap.selected img{outline:2px solid #2563EB;outline-offset:2px}
+.resize-handle{position:absolute;width:10px;height:10px;background:#2563EB;border:1px solid #fff;border-radius:2px;z-index:10}
+.resize-handle.se{bottom:-5px;right:-5px;cursor:se-resize}
+.resize-handle.sw{bottom:-5px;left:-5px;cursor:sw-resize}
+.resize-handle.ne{top:-5px;right:-5px;cursor:ne-resize}
+.resize-handle.nw{top:-5px;left:-5px;cursor:nw-resize}
+.img-size-label{position:absolute;bottom:-22px;left:0;font-size:10px;color:#888;white-space:nowrap;background:#fff;padding:1px 4px;border-radius:3px;border:1px solid #E8E8E5}
+.img-upload-zone{margin-top:10px;border:1px dashed #E0E0DC;border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:all .15s}
+.img-upload-zone:hover{border-color:#2563EB;background:#EEF4FF}
+.img-upload-zone svg{width:22px;height:22px;color:#bbb;margin-bottom:6px}
+.img-upload-label{font-size:12px;color:#999}
+.img-upload-sub{font-size:11px;color:#bbb;margin-top:2px}
+.img-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.img-thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid #E8E8E5;background:#F5F5F3;flex-shrink:0}
+.img-thumb img{width:100%;height:100%;object-fit:cover}
+.img-thumb-x{position:absolute;top:3px;right:3px;width:16px;height:16px;background:rgba(0,0,0,.5);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#fff;font-size:10px;border:none;line-height:1}
+.img-hint{font-size:11px;color:#bbb;margin-top:6px}
+.file-upload-zone{margin-top:10px;border:1px dashed #E0E0DC;border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:all .15s}
+.file-upload-zone:hover{border-color:#2563EB;background:#EEF4FF}
+.file-upload-zone svg{width:20px;height:20px;color:#bbb;margin-bottom:5px}
+.file-list{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.file-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#F5F5F3;border:1px solid #E8E8E5;border-radius:8px;font-size:12px}
+.file-item-icon{width:28px;height:28px;border-radius:6px;background:#EEF4FF;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.file-item-icon svg{width:14px;height:14px;color:#2563EB}
+.file-item-name{flex:1;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-item-size{font-size:11px;color:#bbb;white-space:nowrap}
+.file-item-del{background:none;border:none;cursor:pointer;color:#bbb;padding:2px;display:flex;align-items:center}
+.file-item-del:hover{color:#DC2626}
+.file-item-del svg{width:13px;height:13px}
+.detail-attachments{padding:14px 24px;border-top:1px solid #F0F0EC}
+.detail-attach-title{font-size:12px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px}
+.attach-item{display:flex;align-items:center;gap:10px;padding:9px 12px;background:#F5F5F3;border:1px solid #E8E8E5;border-radius:8px;font-size:12px;text-decoration:none;color:#1a1a1a;transition:all .15s;margin-bottom:6px}
+.attach-item:hover{background:#EEF4FF;border-color:#2563EB}
+.attach-item-icon{width:28px;height:28px;border-radius:6px;background:#EEF4FF;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.attach-item-icon svg{width:14px;height:14px;color:#2563EB}
+.attach-item-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.attach-item-size{font-size:11px;color:#bbb;white-space:nowrap}
+.attach-download{display:flex;align-items:center;gap:3px;font-size:11px;color:#2563EB;white-space:nowrap}
+.attach-download svg{width:12px;height:12px}
+.write-footer{padding:14px 24px;border-top:1px solid #F0F0EC;display:flex;gap:8px;justify-content:flex-end}
+
+/* 그룹/카테고리 관리 모달 */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:12px;border:1px solid #E8E8E5;width:440px;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-header{padding:16px 20px;border-bottom:1px solid #F0F0EC;display:flex;align-items:center;justify-content:space-between}
+.modal-header h2{font-size:14px;font-weight:600}
+.modal-body{padding:20px}
+.modal-footer{padding:12px 20px;border-top:1px solid #F0F0EC;display:flex;gap:8px;justify-content:flex-end}
+.manage-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:#F5F5F3;border-radius:8px;margin-bottom:6px}
+.manage-item-name{font-size:13px;flex:1}
+.manage-item-del{padding:4px 10px;border:1px solid #FECACA;border-radius:6px;background:#FEE2E2;color:#DC2626;font-size:11px;cursor:pointer;font-family:inherit}
+.add-row{display:flex;gap:8px;margin-top:10px}
+.add-input{flex:1;padding:8px 12px;border:1px solid #E0E0DC;border-radius:8px;font-size:13px;font-family:inherit;outline:none}
+.add-input:focus{border-color:#2563EB}
+
+.loading{text-align:center;padding:40px;color:#bbb;font-size:13px}
+#toast{position:fixed;bottom:24px;right:24px;background:#1a1a1a;color:#fff;border-radius:8px;padding:12px 18px;font-size:13px;display:none;z-index:200;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div id="logo" onclick="goHome()">
+      <div class="logo-back">← 포털 홈으로</div>
+      <div class="logo-title">📖 업무 매뉴얼</div>
+      <div class="logo-sub">인사이더그램 컴퍼니</div>
+    </div>
+    <div class="nav-wrap">
+      <div style="padding:8px 0 4px"><div class="nav-label">그룹</div></div>
+      <div id="nav-groups"><div class="loading">불러오는 중...</div></div>
+      <button class="nav-add-btn" onclick="openGroupModal()">+ 그룹 / 카테고리 관리</button>
+
+    </div>
+    <div id="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-av" id="s-avatar">?</div>
+        <div><div class="u-name" id="s-name">-</div><div class="u-role" id="s-role">-</div></div>
+      </div>
+      <button class="home-btn" onclick="goHome()">← 포털 홈으로</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="topbar">
+      <h1 id="page-title">업무 매뉴얼</h1>
+      <div class="search-wrap">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
+        <input type="text" id="search-input" placeholder="매뉴얼 검색..." oninput="searchManuals(this.value)">
+      </div>
+      <button class="btn btn-primary" onclick="showWrite()">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3L6 13H3v-3L11 2z"/></svg>
+        매뉴얼 등록
+      </button>
+    </div>
+
+    <div id="content">
+      <!-- 게시판 목록 -->
+      <div id="page-list" class="page active">
+        <div class="board-header">
+          <div class="board-title-text" id="board-group-title">전체 매뉴얼</div>
+        </div>
+        <div class="board-sub" id="board-count">불러오는 중...</div>
+        <div class="board-wrap">
+          <div class="board-thead">
+            <div style="text-align:center">번호</div>
+            <div>제목</div>
+            <div style="text-align:center">작성자</div>
+            <div style="text-align:center">등록일</div>
+            <div style="text-align:center">조회</div>
+          </div>
+          <div id="board-body"><div class="board-empty">불러오는 중...</div></div>
+        </div>
+        <div class="page-wrap" id="page-nav"></div>
+      </div>
+
+      <!-- 상세 보기 -->
+      <div id="page-detail" class="page">
+        <div class="detail-wrap">
+          <div class="detail-head">
+            <div class="detail-cat-badge" id="d-cat">-</div>
+            <div class="detail-title" id="d-title">-</div>
+            <div class="detail-meta">
+              <div class="detail-meta-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/></svg><span id="d-author">-</span></div>
+              <div class="detail-meta-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1"/><line x1="5" y1="1" x2="5" y2="5"/><line x1="11" y1="1" x2="11" y2="5"/><line x1="2" y1="8" x2="14" y2="8"/></svg><span id="d-date">-</span></div>
+              <div class="detail-meta-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg><span id="d-views">-</span>회 열람</div>
+            </div>
+          </div>
+          <div class="detail-body" id="d-body"></div>
+          <div class="detail-attachments" id="d-attachments" style="display:none">
+            <div class="detail-attach-title">첨부 파일</div>
+            <div id="d-attach-list"></div>
+          </div>
+          <div class="detail-footer">
+            <button class="back-btn" onclick="showList()">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="10 4 6 8 10 12"/></svg>
+              목록으로
+            </button>
+            <div style="display:flex;gap:8px">
+              <button class="btn" id="edit-btn" onclick="editManual()" style="display:none">수정</button>
+              <button class="btn btn-danger" id="del-btn" onclick="deleteManual()" style="display:none">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3 4 13 4"/><path d="M5 4V2h6v2M6 7v5M10 7v5"/><rect x="4" y="4" width="8" height="9" rx="1"/></svg>
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 등록/수정 폼 -->
+      <div id="page-write" class="page">
+        <div class="write-wrap">
+          <div class="write-head" id="write-head-title">매뉴얼 등록</div>
+          <div class="write-body">
+            <div class="form-row form-grid2">
+              <div>
+                <label class="form-label">그룹 <span class="req">*</span></label>
+                <select class="form-select" id="w-group" onchange="loadCatsForWrite()">
+                  <option value="">그룹 선택</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label">카테고리 <span class="req">*</span></label>
+                <select class="form-select" id="w-cat">
+                  <option value="">카테고리 선택</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">제목 <span class="req">*</span></label>
+              <input class="form-input" type="text" id="w-title" placeholder="매뉴얼 제목을 입력하세요">
+            </div>
+            <div class="form-row">
+              <label class="form-label">본문 <span class="req">*</span></label>
+              <div class="editor-wrap">
+                <div class="editor-toolbar">
+                  <button class="tool-btn" onclick="execCmd('bold')" title="굵게"><b>B</b></button>
+                  <button class="tool-btn" onclick="execCmd('italic')" title="기울임"><i>I</i></button>
+                  <button class="tool-btn" onclick="execCmd('underline')" title="밑줄"><u>U</u></button>
+                  <div class="tool-sep"></div>
+                  <button class="tool-btn" onclick="execBlock('h2')" title="제목1">H1</button>
+                  <button class="tool-btn" onclick="execBlock('h3')" title="제목2">H2</button>
+                  <div class="tool-sep"></div>
+                  <button class="tool-btn" onclick="execCmd('insertUnorderedList')" title="글머리">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="6" y1="5" x2="13" y2="5"/><line x1="6" y1="8" x2="13" y2="8"/><line x1="6" y1="11" x2="13" y2="11"/><circle cx="3" cy="5" r="1" fill="currentColor"/><circle cx="3" cy="8" r="1" fill="currentColor"/><circle cx="3" cy="11" r="1" fill="currentColor"/></svg>
+                  </button>
+                  <button class="tool-btn" onclick="execCmd('insertOrderedList')" title="번호목록">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="6" y1="5" x2="13" y2="5"/><line x1="6" y1="8" x2="13" y2="8"/><line x1="6" y1="11" x2="13" y2="11"/><text x="1" y="6" font-size="5" fill="currentColor" stroke="none">1</text><text x="1" y="9" font-size="5" fill="currentColor" stroke="none">2</text><text x="1" y="12" font-size="5" fill="currentColor" stroke="none">3</text></svg>
+                  </button>
+                  <div class="tool-sep"></div>
+                  <button class="tool-btn" onclick="insertLink()" title="링크">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 10a4 4 0 005.66 0l1.41-1.41a4 4 0 00-5.66-5.66L6 4.34"/><path d="M10 6a4 4 0 00-5.66 0L2.93 7.41a4 4 0 005.66 5.66L10 11.66"/></svg>
+                    링크
+                  </button>
+                  <button class="tool-btn" onclick="triggerImgInsert()" title="이미지 삽입">
+                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><circle cx="6" cy="7" r="1.5"/><path d="M2 11l3-3 3 3 2-2 4 4"/></svg>
+                    이미지
+                  </button>
+                  <div class="tool-sep"></div>
+                  <select onchange="setFontSize(this.value)" title="글자 크기" style="padding:3px 6px;border:1px solid #E0E0DC;border-radius:5px;font-size:11px;font-family:inherit;color:#555;background:#fff;cursor:pointer;outline:none">
+                    <option value="">크기</option>
+                    <option value="11px">11</option>
+                    <option value="12px">12</option>
+                    <option value="13px">13 (기본)</option>
+                    <option value="14px">14</option>
+                    <option value="16px">16</option>
+                    <option value="18px">18</option>
+                    <option value="20px">20</option>
+                    <option value="24px">24</option>
+                    <option value="28px">28</option>
+                    <option value="32px">32</option>
+                    <option value="36px">36</option>
+                    <option value="40px">40</option>
+                  </select>
+                  <select onchange="setFontColor(this.value)" title="글자 색상" style="padding:3px 6px;border:1px solid #E0E0DC;border-radius:5px;font-size:11px;font-family:inherit;color:#555;background:#fff;cursor:pointer;outline:none">
+                    <option value="">색상</option>
+                    <option value="#1a1a1a">⬛ 검정</option>
+                    <option value="#555555">◼ 회색</option>
+                    <option value="#2563EB">🔵 파랑</option>
+                    <option value="#DC2626">🔴 빨강</option>
+                    <option value="#059669">🟢 초록</option>
+                    <option value="#D97706">🟡 주황</option>
+                    <option value="#7C3AED">🟣 보라</option>
+                  </select>
+                  <input type="file" id="editor-img-input" accept="image/*" style="display:none" onchange="insertImgToEditor(this)">
+                </div>
+                <div class="editor-area" id="editor" contenteditable="true" data-placeholder="매뉴얼 내용을 입력하세요..."></div>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">첨부 파일</label>
+              <div class="file-upload-zone" onclick="document.getElementById('attach-file-input').click()">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 5px"><path d="M8 1v9M5 7l3 3 3-3"/><path d="M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1"/></svg>
+                <div style="font-size:12px;color:#999">파일을 클릭하거나 드래그해서 업로드</div>
+                <div style="font-size:11px;color:#bbb;margin-top:2px">PDF, Word, Excel, PPT, ZIP 등 · 최대 50MB</div>
+              </div>
+              <input type="file" id="attach-file-input" multiple style="display:none" onchange="handleAttachFile(this)">
+              <div class="file-list" id="file-list"></div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">첨부 이미지</label>
+              <div class="img-upload-zone" onclick="document.getElementById('attach-img-input').click()">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 6px"><rect x="2" y="3" width="12" height="10" rx="1"/><circle cx="6" cy="7" r="1.5"/><path d="M2 11l3-3 3 3 2-2 4 4"/></svg>
+                <div class="img-upload-label">이미지를 클릭하거나 드래그해서 업로드</div>
+                <div class="img-upload-sub">PNG, JPG, GIF · 최대 10MB</div>
+              </div>
+              <input type="file" id="attach-img-input" accept="image/*" multiple style="display:none" onchange="handleAttachImg(this)">
+              <div class="img-list" id="img-list"></div>
+              <div class="img-hint">업로드된 이미지는 본문에 자동으로 삽입됩니다.</div>
+            </div>
+          </div>
+          <div class="write-footer">
+            <button class="btn" onclick="showList()">취소</button>
+            <button class="btn btn-primary" onclick="submitManual()">등록하기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 그룹/카테고리 관리 모달 -->
+<div id="group-modal" class="modal-overlay" onclick="if(event.target===this)closeGroupModal()">
+  <div class="modal-box">
+    <div class="modal-header"><h2>그룹 / 카테고리 관리</h2><button class="btn" onclick="closeGroupModal()">✕</button></div>
+    <div class="modal-body">
+      <div style="font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">그룹</div>
+      <div id="modal-groups"></div>
+      <div class="add-row">
+        <input class="add-input" type="text" id="new-group-input" placeholder="새 그룹명 입력" onkeydown="if(event.key==='Enter')addGroup()">
+        <button class="btn btn-primary" onclick="addGroup()">추가</button>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px">카테고리</div>
+      <div style="margin-bottom:8px">
+        <select class="form-select" id="modal-group-sel" onchange="loadModalCats()" style="margin-bottom:8px">
+          <option value="">그룹 선택</option>
+        </select>
+        <div id="modal-cats"><div style="color:#bbb;font-size:12px;text-align:center;padding:10px">그룹을 선택해주세요</div></div>
+      </div>
+      <div class="add-row">
+        <input class="add-input" type="text" id="new-cat-input" placeholder="새 카테고리명 입력" onkeydown="if(event.key==='Enter')addCategory()">
+        <button class="btn btn-primary" onclick="addCategory()">추가</button>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeGroupModal()">닫기</button></div>
+  </div>
+</div>
+
+<div id="page-manual-logs" class="page" style="display:none">
+  <div style="background:#fff;border:1px solid #E8E8E5;border-radius:10px;overflow:hidden">
+    <div style="padding:14px 18px;border-bottom:1px solid #F0F0EC;font-size:13px;font-weight:600">접속 로그</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#FAFAF8">
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:#999;border-bottom:1px solid #E8E8E5">일시</th>
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:#999;border-bottom:1px solid #E8E8E5">사용자</th>
+        <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:#999;border-bottom:1px solid #E8E8E5">액션</th>
+      </tr></thead>
+      <tbody id="manual-log-body"><tr><td colspan="3" style="text-align:center;padding:30px;color:#bbb">불러오는 중...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://wykcorpvmnfjqbvqynla.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5a2NvcnB2bW5manFidnF5bmxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MTUzMzAsImV4cCI6MjA5MzM5MTMzMH0.oIGBdRj6sjSw8TvPb03NaEBemML8Y35CM5xo9NJ_q30';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let currentUser=null,currentUserRole=null,toastTimer;
+let allManuals=[],currentCatId=null,currentGroupName='',currentCatName='';
+let currentManualId=null,editingId=null;
+let attachedImgs=[];let attachedFiles=[];
+const PER_PAGE=15;
+let currentPage=1;
+
+function goHome(){ if(document.referrer && !document.referrer.endsWith(window.location.pathname)){ history.back(); } else { window.location.href='../'; } }
+
+async function showManualLogs(){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  const logsPage=document.getElementById('page-manual-logs');
+  if(logsPage){logsPage.classList.add('active');}
+  document.getElementById('page-title').textContent='접속 로그';
+  // 로그 로드
+  const {data}=await sb.from('portal_access_logs').select('*').eq('menu','업무매뉴얼').order('accessed_at',{ascending:false}).limit(200);
+  const logs=data||[];
+  const tbody=document.getElementById('manual-log-body');
+  if(tbody)tbody.innerHTML=logs.length?logs.map(l=>`
+    <tr><td style="font-size:11px;color:#999">${l.accessed_at.slice(0,19).replace('T',' ')}</td>
+    <td style="font-size:12px">${l.user_name||l.user_email}</td>
+    <td><span style="background:#EEF4FF;color:#2563EB;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px">${l.action}</span></td></tr>`).join('')
+    :'<tr><td colspan="3" style="text-align:center;padding:30px;color:#bbb">로그가 없습니다.</td></tr>';
+}
+
+async function checkAuth(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){window.location.href='../';return;}
+  currentUser=session.user;
+  let {data:roleData}=await sb.from('user_roles').select('*').eq('user_id',currentUser.id).single();
+  if(!roleData){window.location.href='../';return;}
+  currentUserRole=roleData;
+  const name=roleData.name||currentUser.email.split('@')[0];
+  document.getElementById('s-avatar').textContent=name.charAt(0).toUpperCase();
+  document.getElementById('s-name').textContent=roleData.name||currentUser.email;
+  document.getElementById('s-role').textContent=[roleData.department,roleData.position].filter(Boolean).join(' · ')||(roleData.role==='admin'?'관리자':'일반 사용자');
+  await loadNav();
+  await loadAllManuals();
+
+}
+
+// ─── 네비게이션 ────────────────────────────────────────────────────────
+async function loadNav(){
+  const {data:groups}=await sb.from('manual_groups').select('*, manual_categories(*)').order('sort_order');
+  if(!groups||!groups.length){
+    document.getElementById('nav-groups').innerHTML='<div style="padding:10px 18px;font-size:12px;color:#bbb">등록된 그룹이 없습니다.</div>';
+    return;
+  }
+  document.getElementById('nav-groups').innerHTML=groups.map(g=>`
+    <div class="nav-group">
+      <div class="nav-group-header" onclick="toggleNavGroup('ng-${g.id}','arr-${g.id}')">
+        <div class="nav-group-left">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="10" rx="1"/><line x1="5" y1="7" x2="11" y2="7"/><line x1="5" y1="10" x2="9" y2="10"/></svg>
+          ${g.name}
+        </div>
+        <svg id="arr-${g.id}" class="nav-group-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4 6 8 10 12 6"/></svg>
+      </div>
+      <div id="ng-${g.id}" class="nav-cat-list">
+        ${(g.manual_categories||[]).sort((a,b)=>a.sort_order-b.sort_order).map(c=>`
+          <div class="nav-cat" id="cat-nav-${c.id}" onclick="selectCat('${c.id}','${g.name}','${c.name}')">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h8a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><line x1="5" y1="6" x2="11" y2="6"/><line x1="5" y1="9" x2="9" y2="9"/></svg>
+            ${c.name}
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function toggleNavGroup(catId,arrId){
+  const el=document.getElementById(catId);
+  const arr=document.getElementById(arrId);
+  const hidden=el.style.display==='none';
+  el.style.display=hidden?'block':'none';
+  arr.classList.toggle('closed',!hidden);
+}
+
+async function selectCat(catId,groupName,catName){
+  currentCatId=catId;currentGroupName=groupName;currentCatName=catName;
+  document.querySelectorAll('.nav-cat').forEach(el=>el.classList.remove('active'));
+  document.getElementById('cat-nav-'+catId)?.classList.add('active');
+  document.getElementById('page-title').textContent=catName;
+  document.getElementById('board-group-title').textContent=groupName+' · '+catName;
+  await loadManuals(catId);
+  showList();
+}
+
+// ─── 매뉴얼 목록 ──────────────────────────────────────────────────────
+async function loadAllManuals(){
+  const {data}=await sb.from('manuals').select('*, manual_categories(name, manual_groups(name))').order('created_at',{ascending:false});
+  allManuals=data||[];
+  renderBoard(allManuals,1);
+  document.getElementById('board-group-title').textContent='전체 매뉴얼';
+  document.getElementById('board-count').textContent=`총 ${allManuals.length}개 매뉴얼`;
+}
+
+async function loadManuals(catId){
+  const {data}=await sb.from('manuals').select('*, manual_categories(name, manual_groups(name))').eq('category_id',catId).order('created_at',{ascending:false});
+  allManuals=data||[];
+  renderBoard(allManuals,1);
+  document.getElementById('board-count').textContent=`총 ${allManuals.length}개 매뉴얼`;
+}
+
+function renderBoard(data,page){
+  currentPage=page;
+  const start=(page-1)*PER_PAGE,end=start+PER_PAGE;
+  const paged=data.slice(start,end);
+  const tbody=document.getElementById('board-body');
+  if(!paged.length){tbody.innerHTML='<div class="board-empty">등록된 매뉴얼이 없습니다.</div>';document.getElementById('page-nav').innerHTML='';return;}
+  const now=Date.now();
+  tbody.innerHTML=paged.map((m,i)=>{
+    const num=data.length-(start+i);
+    const isNew=(now-new Date(m.created_at))<86400000*3;
+    const catName=m.manual_categories?.name||'-';
+    return `<div class="board-row" onclick="openDetail('${m.id}')">
+      <div class="board-num">${num}</div>
+      <div class="board-title-cell">
+        <span class="board-cat-badge">${catName}</span>
+        <span class="board-title-main">${m.title}</span>
+        ${isNew?'<span class="new-badge">N</span>':''}
+      </div>
+      <div class="board-author">${m.author_name||'-'}</div>
+      <div class="board-date">${toKSTDate(m.created_at)}</div>
+      <div class="board-views"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg>${m.view_count||0}</div>
+    </div>`;
+  }).join('');
+  renderPageNav(data.length,page);
+}
+
+function renderPageNav(total,current){
+  const pages=Math.ceil(total/PER_PAGE);
+  if(pages<=1){document.getElementById('page-nav').innerHTML='';return;}
+  let html=`<button class="page-btn" onclick="renderBoard(allManuals,${Math.max(1,current-1)})"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="10 4 6 8 10 12"/></svg></button>`;
+  for(let p=1;p<=pages;p++)html+=`<button class="page-btn ${p===current?'active':''}" onclick="renderBoard(allManuals,${p})">${p}</button>`;
+  html+=`<button class="page-btn" onclick="renderBoard(allManuals,${Math.min(pages,current+1)})"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="6 4 10 8 6 12"/></svg></button>`;
+  document.getElementById('page-nav').innerHTML=html;
+}
+
+function searchManuals(q){
+  if(!q){loadAllManuals();return;}
+  const filtered=allManuals.filter(m=>m.title.toLowerCase().includes(q.toLowerCase())||(m.content||'').toLowerCase().includes(q.toLowerCase()));
+  renderBoard(filtered,1);
+  document.getElementById('board-group-title').textContent=`"${q}" 검색 결과`;
+  document.getElementById('board-count').textContent=`${filtered.length}개 결과`;
+}
+
+// ─── 상세 보기 ─────────────────────────────────────────────────────────
+async function openDetail(id){
+  currentManualId=id;
+  const {data:m}=await sb.from('manuals').select('*, manual_categories(name)').eq('id',id).single();
+  if(!m)return;
+  await sb.from('manuals').update({view_count:(m.view_count||0)+1}).eq('id',id);
+  document.getElementById('d-cat').textContent=m.manual_categories?.name||'-';
+  document.getElementById('d-title').textContent=m.title;
+  document.getElementById('d-author').textContent=m.author_name||'-';
+  document.getElementById('d-date').textContent=toKSTDate(m.created_at);
+  document.getElementById('d-views').textContent=(m.view_count||0)+1;
+  // 첨부파일 표시
+  const attachments=m.attachments||[];
+  const attachWrap=document.getElementById('d-attachments');
+  const attachList=document.getElementById('d-attach-list');
+  if(attachments.length>0){
+    attachWrap.style.display='block';
+    attachList.innerHTML=attachments.map(f=>`
+      <a class="attach-item" href="${f.url}" target="_blank" download="${f.name}">
+        <div class="attach-item-icon">${getFileIcon(f.name)}</div>
+        <div class="attach-item-name">${f.name}</div>
+        <div class="attach-item-size">${formatSize(f.size||0)}</div>
+        <div class="attach-download">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v9M5 7l3 3 3-3"/><path d="M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1"/></svg>
+          다운로드
+        </div>
+      </a>`).join('');
+  } else {
+    attachWrap.style.display='none';
+  }
+  document.getElementById('d-body').innerHTML=m.content||'';
+  const canDel=currentUserRole.role==='admin'||m.author_id===currentUser.id;
+  document.getElementById('del-btn').style.display=canDel?'inline-flex':'none';
+  document.getElementById('edit-btn').style.display=canDel?'inline-flex':'none';
+  showPage('detail');
+  document.getElementById('page-title').textContent=m.title;
+}
+
+async function deleteManual(){
+  if(!currentManualId||!confirm('정말 삭제하시겠습니까?'))return;
+  await sb.from('manuals').delete().eq('id',currentManualId);
+  showToast('매뉴얼이 삭제되었습니다.');
+  showList();
+  await loadAllManuals();
+}
+
+async function editManual(){
+  if(!currentManualId)return;
+  const {data:m}=await sb.from('manuals').select('*, manual_categories(id, group_id)').eq('id',currentManualId).single();
+  if(!m)return;
+  editingId=currentManualId;
+  await loadWriteGroups();
+  document.getElementById('w-group').value=m.manual_categories?.group_id||'';
+  await loadCatsForWrite();
+  document.getElementById('w-cat').value=m.category_id||'';
+  document.getElementById('w-title').value=m.title;
+  document.getElementById('editor').innerHTML=m.content||'';
+    setTimeout(() => {
+      initEditor();
+      document.getElementById('editor').querySelectorAll('img:not(.img-resize-wrap img)').forEach(img => makeResizable(img));
+    }, 150);
+  document.getElementById('write-head-title').textContent='매뉴얼 수정';
+  document.getElementById('page-title').textContent='매뉴얼 수정';
+  showPage('write');
+}
+
+// ─── 등록 폼 ──────────────────────────────────────────────────────────
+async function showWrite(){
+  editingId=null;
+  attachedImgs=[];attachedFiles=[];
+  document.getElementById('img-list').innerHTML='';
+  document.getElementById('file-list').innerHTML='';
+  document.getElementById('editor').innerHTML='';
+  setTimeout(initEditor, 100);
+  document.getElementById('w-title').value='';
+  document.getElementById('write-head-title').textContent='매뉴얼 등록';
+  document.getElementById('page-title').textContent='매뉴얼 등록';
+  await loadWriteGroups();
+  showPage('write');
+}
+
+async function loadWriteGroups(){
+  const {data:groups}=await sb.from('manual_groups').select('*').order('sort_order');
+  const sel=document.getElementById('w-group');
+  sel.innerHTML='<option value="">그룹 선택</option>'+(groups||[]).map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+  document.getElementById('w-cat').innerHTML='<option value="">카테고리 선택</option>';
+}
+
+async function loadCatsForWrite(){
+  const gid=document.getElementById('w-group').value;
+  if(!gid){document.getElementById('w-cat').innerHTML='<option value="">카테고리 선택</option>';return;}
+  const {data:cats}=await sb.from('manual_categories').select('*').eq('group_id',gid).order('sort_order');
+  document.getElementById('w-cat').innerHTML='<option value="">카테고리 선택</option>'+(cats||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+function execCmd(cmd){document.getElementById('editor').focus();document.execCommand(cmd,false,null);}
+function setFontSize(size){
+  if(!size)return;
+  document.getElementById('editor').focus();
+  const sel=window.getSelection();
+  if(!sel||sel.rangeCount===0)return;
+  const range=sel.getRangeAt(0);
+  if(range.collapsed){
+    // 커서만 있을 때 span 생성
+    const span=document.createElement('span');
+    span.style.fontSize=size;
+    span.innerHTML='&#8203;';
+    range.insertNode(span);
+    range.setStartAfter(span);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else {
+    // 선택된 텍스트에 적용
+    const span=document.createElement('span');
+    span.style.fontSize=size;
+    try{
+      range.surroundContents(span);
+    } catch(e) {
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+    }
+  }
+  // 셀렉트 초기화
+  event.target.value='';
+}
+function setFontColor(color){
+  if(!color)return;
+  document.getElementById('editor').focus();
+  document.execCommand('foreColor',false,color);
+  event.target.value='';
+}
+function execBlock(tag){
+  document.getElementById('editor').focus();
+  document.execCommand('formatBlock',false,tag);
+}
+function insertLink(){
+  const url=prompt('링크 URL을 입력하세요:');
+  if(url){document.getElementById('editor').focus();document.execCommand('createLink',false,url);}
+}
+function triggerImgInsert(){document.getElementById('editor-img-input').click();}
+
+// 이미지 리사이즈 기능
+function makeResizable(img) {
+  const wrap = document.createElement('div');
+  wrap.className = 'img-resize-wrap';
+  wrap.contentEditable = 'false';
+  
+  img.parentNode.insertBefore(wrap, img);
+  wrap.appendChild(img);
+  
+  const handles = ['nw','ne','sw','se'];
+  handles.forEach(pos => {
+    const h = document.createElement('div');
+    h.className = `resize-handle ${pos}`;
+    h.style.display = 'none';
+    wrap.appendChild(h);
+    
+    h.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX;
+      const startW = img.offsetWidth;
+      const startH = img.offsetHeight;
+      const ratio = startH / startW;
+      
+      const sizeLabel = wrap.querySelector('.img-size-label') || (() => {
+        const l = document.createElement('div');
+        l.className = 'img-size-label';
+        wrap.appendChild(l);
+        return l;
+      })();
+      
+      function onMove(e) {
+        let dx = e.clientX - startX;
+        if (pos.includes('w')) dx = -dx;
+        let newW = Math.max(80, startW + dx);
+        let newH = Math.round(newW * ratio);
+        img.style.width = newW + 'px';
+        img.style.height = newH + 'px';
+        sizeLabel.textContent = newW + ' × ' + newH;
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        const sl = wrap.querySelector('.img-size-label');
+        if (sl) setTimeout(() => sl.remove(), 1500);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+
+  wrap.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.img-resize-wrap').forEach(w => {
+      w.classList.remove('selected');
+      w.querySelectorAll('.resize-handle').forEach(h => h.style.display = 'none');
+    });
+    wrap.classList.add('selected');
+    wrap.querySelectorAll('.resize-handle').forEach(h => h.style.display = 'block');
+  });
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.img-resize-wrap')) {
+    document.querySelectorAll('.img-resize-wrap').forEach(w => {
+      w.classList.remove('selected');
+      w.querySelectorAll('.resize-handle').forEach(h => h.style.display = 'none');
+    });
+  }
+});
+
+// 에디터 내 이미지 변화 감지해서 리사이즈 적용
+const editorObserver = new MutationObserver((mutations) => {
+  mutations.forEach(m => {
+    m.addedNodes.forEach(node => {
+      if (node.nodeName === 'IMG' && !node.closest('.img-resize-wrap')) {
+        makeResizable(node);
+      }
+    });
+  });
+});
+
+function initEditor() {
+  const editor = document.getElementById('editor');
+  if (editor) {
+    editorObserver.observe(editor, { childList: true, subtree: true });
+    editor.querySelectorAll('img:not(.img-resize-wrap img)').forEach(img => makeResizable(img));
+  }
+}
+
+async function insertImgToEditor(input){
+  const file=input.files[0];if(!file)return;
+  const url=await uploadImg(file);
+  if(url){
+    document.getElementById('editor').focus();
+    document.execCommand('insertImage',false,url);
+  }
+  input.value='';
+}
+
+async function handleAttachImg(input){
+  const files=Array.from(input.files);
+  for(const file of files){
+    const url=await uploadImg(file);
+    if(url){
+      attachedImgs.push(url);
+      const div=document.createElement('div');
+      div.className='img-thumb';
+      div.innerHTML=`<img src="${url}"><button class="img-thumb-x" onclick="removeImg('${url}',this.parentElement)">×</button>`;
+      document.getElementById('img-list').appendChild(div);
+      document.getElementById('editor').focus();
+      document.execCommand('insertImage',false,url);
+    }
+  }
+  input.value='';
+}
+
+function removeImg(url,el){
+  attachedImgs=attachedImgs.filter(u=>u!==url);
+  el.remove();
+}
+
+async function handleAttachFile(input){
+  const files=Array.from(input.files);
+  for(const file of files){
+    if(file.size>50*1024*1024){showToast(`${file.name}은 20MB를 초과합니다.`);continue;}
+    const url=await uploadFile(file);
+    if(url){
+      attachedFiles.push({name:file.name,size:file.size,url});
+      renderFileList();
+    }
+  }
+  input.value='';
+}
+
+function renderFileList(){
+  document.getElementById('file-list').innerHTML=attachedFiles.map((f,i)=>`
+    <div class="file-item">
+      <div class="file-item-icon">${getFileIcon(f.name)}</div>
+      <div class="file-item-name">${f.name}</div>
+      <div class="file-item-size">${formatSize(f.size)}</div>
+      <button class="file-item-del" onclick="removeFile(${i})">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg>
+      </button>
+    </div>`).join('');
+}
+
+function removeFile(idx){
+  attachedFiles.splice(idx,1);
+  renderFileList();
+}
+
+function getFileIcon(name){
+  const ext=name.split('.').pop().toLowerCase();
+  const color=ext==='pdf'?'#DC2626':ext==='xlsx'||ext==='xls'?'#059669':ext==='docx'||ext==='doc'?'#2563EB':ext==='pptx'||ext==='ppt'?'#D97706':'#888';
+  return `<svg viewBox="0 0 16 16" fill="none" stroke="${color}" stroke-width="1.5"><path d="M4 2h5l3 3v9a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><path d="M9 2v3h3"/></svg>`;
+}
+
+function formatSize(bytes){
+  if(bytes<1024)return bytes+'B';
+  if(bytes<1024*1024)return (bytes/1024).toFixed(1)+'KB';
+  return (bytes/1024/1024).toFixed(1)+'MB';
+}
+
+async function uploadFile(file){
+  const ext=file.name.split('.').pop();
+  const path=`${currentUser.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+  const {data,error}=await sb.storage.from('manual-files').upload(path,file,{contentType:file.type});
+  if(error){showToast('파일 업로드 실패: '+error.message);return null;}
+  const {data:{publicUrl}}=sb.storage.from('manual-files').getPublicUrl(path);
+  return publicUrl;
+}
+
+async function uploadImg(file){
+  const ext=file.name.split('.').pop();
+  const path=`${currentUser.id}/${Date.now()}.${ext}`;
+  const {data,error}=await sb.storage.from('manual-images').upload(path,file,{contentType:file.type});
+  if(error){showToast('이미지 업로드 실패: '+error.message);return null;}
+  const {data:{publicUrl}}=sb.storage.from('manual-images').getPublicUrl(path);
+  return publicUrl;
+}
+
+async function submitManual(){
+  const catId=document.getElementById('w-cat').value;
+  const title=document.getElementById('w-title').value.trim();
+  // 저장 전 리사이즈 wrap 정리 (img 태그만 남기고 wrap 제거)
+  const editorClone = document.getElementById('editor').cloneNode(true);
+  editorClone.querySelectorAll('.img-resize-wrap').forEach(wrap => {
+    const img = wrap.querySelector('img');
+    if (img) wrap.parentNode.insertBefore(img, wrap);
+    wrap.remove();
+  });
+  editorClone.querySelectorAll('.resize-handle,.img-size-label').forEach(el => el.remove());
+  const content = editorClone.innerHTML;
+  if(!catId||!title||!content||content==='<br>'){showToast('그룹, 카테고리, 제목, 본문은 필수입니다.');return;}
+  const name=currentUserRole.name||currentUser.email.split('@')[0];
+  if(editingId){
+    await sb.from('manuals').update({category_id:catId,title,content,attachments:attachedFiles,updated_at:new Date().toISOString()}).eq('id',editingId);
+    showToast('매뉴얼이 수정되었습니다.');
+  }else{
+    await sb.from('manuals').insert({category_id:catId,title,content,author_id:currentUser.id,author_name:name,attachments:attachedFiles});
+    showToast('매뉴얼이 등록되었습니다.');
+  }
+  editingId=null;
+  showList();
+  await loadAllManuals();
+}
+
+// ─── 그룹/카테고리 관리 ───────────────────────────────────────────────
+async function openGroupModal(){
+  await loadModalGroups();
+  document.getElementById('group-modal').classList.add('show');
+}
+function closeGroupModal(){
+  document.getElementById('group-modal').classList.remove('show');
+  loadNav();
+}
+
+async function loadModalGroups(){
+  const {data:groups}=await sb.from('manual_groups').select('*').order('sort_order');
+  const sel=document.getElementById('modal-group-sel');
+  sel.innerHTML='<option value="">그룹 선택</option>'+(groups||[]).map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+  document.getElementById('modal-groups').innerHTML=(groups||[]).map(g=>`
+    <div class="manage-item">
+      <span class="manage-item-name">${g.name}</span>
+      <button class="manage-item-del" onclick="deleteGroup('${g.id}','${g.name}')">삭제</button>
+    </div>`).join('')||'<div style="color:#bbb;font-size:12px;text-align:center;padding:8px">등록된 그룹이 없습니다.</div>';
+}
+
+async function loadModalCats(){
+  const gid=document.getElementById('modal-group-sel').value;
+  if(!gid){document.getElementById('modal-cats').innerHTML='<div style="color:#bbb;font-size:12px;text-align:center;padding:8px">그룹을 선택해주세요</div>';return;}
+  const {data:cats}=await sb.from('manual_categories').select('*').eq('group_id',gid).order('sort_order');
+  document.getElementById('modal-cats').innerHTML=(cats||[]).map(c=>`
+    <div class="manage-item">
+      <span class="manage-item-name">${c.name}</span>
+      <button class="manage-item-del" onclick="deleteCat('${c.id}','${c.name}')">삭제</button>
+    </div>`).join('')||'<div style="color:#bbb;font-size:12px;text-align:center;padding:8px">등록된 카테고리가 없습니다.</div>';
+}
+
+async function addGroup(){
+  const name=document.getElementById('new-group-input').value.trim();
+  if(!name){showToast('그룹명을 입력해주세요.');return;}
+  await sb.from('manual_groups').insert({name,created_by:currentUser.id});
+  document.getElementById('new-group-input').value='';
+  showToast('그룹이 추가되었습니다.');
+  await loadModalGroups();
+}
+
+async function deleteGroup(id,name){
+  if(!confirm(`"${name}" 그룹과 하위 카테고리/매뉴얼이 모두 삭제됩니다. 계속할까요?`))return;
+  await sb.from('manual_groups').delete().eq('id',id);
+  showToast('그룹이 삭제되었습니다.');
+  await loadModalGroups();
+}
+
+async function addCategory(){
+  const gid=document.getElementById('modal-group-sel').value;
+  const name=document.getElementById('new-cat-input').value.trim();
+  if(!gid){showToast('그룹을 먼저 선택해주세요.');return;}
+  if(!name){showToast('카테고리명을 입력해주세요.');return;}
+  await sb.from('manual_categories').insert({group_id:gid,name});
+  document.getElementById('new-cat-input').value='';
+  showToast('카테고리가 추가되었습니다.');
+  await loadModalCats();
+}
+
+async function deleteCat(id,name){
+  if(!confirm(`"${name}" 카테고리와 하위 매뉴얼이 모두 삭제됩니다. 계속할까요?`))return;
+  await sb.from('manual_categories').delete().eq('id',id);
+  showToast('카테고리가 삭제되었습니다.');
+  await loadModalCats();
+}
+
+// ─── 페이지 전환 ──────────────────────────────────────────────────────
+function showPage(name, push=true){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(push) history.pushState({page:name}, '', '#'+name);
+}
+window.addEventListener('popstate', function(e){
+  const pg=(e.state&&e.state.page)||'list';
+  showPage(pg, false);
+  if(pg==='list'){
+    document.getElementById('page-title').textContent=currentCatName||'전체 매뉴얼';
+    if(document.getElementById('search-input')) document.getElementById('search-input').value='';
+  }
+});
+
+function showList(){
+  showPage('list');
+  document.getElementById('page-title').textContent=currentCatName||'전체 매뉴얼';
+  document.getElementById('search-input').value='';
+}
+
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.style.display='block';
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.display='none',3500);
+}
+
+checkAuth();
+</script>
+</body>
+</html>
