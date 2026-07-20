@@ -123,6 +123,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ir-cost-val{font-size:12px;font-weight:600;color:#1A1D27;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ir-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .ir-date{font-size:11px;color:#9EA5B8;white-space:nowrap}
+.ir-reg{font-size:10px;color:#B0B5C4;white-space:nowrap;margin-top:2px}
 .ir-ai{background:#EEF0FF;border-top:1px solid #C7C4FF;padding:10px 18px;font-size:12px;color:#3730a3;line-height:1.6}
 .ir-ai strong{color:#534AB7}
 .empty-state{text-align:center;padding:48px 20px;color:#9EA5B8}
@@ -557,6 +558,9 @@ let selectedIds = new Set();
 
 const distColors = ['#6C63FF','#22C55E','#F59E0B','#3B82F6','#EC4899','#94A3B8','#A855F7','#14B8A6'];
 
+/* ── 현재 사용자 이름 ── */
+function currentUserName(){ return currentUserRole?.name || '이름없음'; }
+
 /* ── 포맷 유틸 ── */
 function fmtDate(ts){
   if(!ts) return '-';
@@ -783,7 +787,10 @@ function makeCardHTML(r, topMatch, aiFeedback){
         <div class="ir-cost"><div class="ir-cost-label">2차활용</div><div class="ir-cost-val" title="${r.usage_cost||''}">${r.usage_cost||'-'}</div></div>
       </div>
       <div class="ir-actions">
-        <span class="ir-date">${fmtDate(r.created_at)}</span>
+        <div style="text-align:right">
+          <span class="ir-date">${fmtDate(r.created_at)}</span>
+          ${r.created_by?`<div class="ir-reg" title="최초등록자">${r.created_by} 등록</div>`:''}
+        </div>
         ${r.channel_url?`<button class="btn btn-sm" onclick="event.stopPropagation();window.open('${r.channel_url}','_blank')">채널보기</button>`:''}
         <button class="btn btn-sm" onclick="event.stopPropagation();openModal(${r.id})">상세보기</button>
       </div>
@@ -890,6 +897,12 @@ function openModal(id){
     </div>
     ${r.notes?`<div class="m-sec"><div class="m-lbl">특이사항</div><p class="m-txt">${r.notes}</p></div>`:''}
     <div class="m-sec"><div class="m-lbl">협업 이력 (${collabs.length}건)</div><div class="collab-list">${collabHtml}</div></div>
+    <div class="m-sec"><div class="m-lbl">등록 정보</div>
+      <div class="m-grid2">
+        <div class="m-kv"><div class="m-kv-k">최초등록자</div><div class="m-kv-v">${r.created_by||'-'} <span style="color:#9EA5B8;font-weight:400">(${fmtDate(r.created_at)})</span></div></div>
+        <div class="m-kv"><div class="m-kv-k">최근수정자</div><div class="m-kv-v">${r.updated_by||r.created_by||'-'} <span style="color:#9EA5B8;font-weight:400">(${fmtDate(r.updated_at||r.created_at)})</span></div></div>
+      </div>
+    </div>
   `;
   const ftEl = document.getElementById('modal-ft-btns');
   const isAdmin = currentUserRole?.role === 'admin';
@@ -983,7 +996,8 @@ async function submitForm(){
   };
 
   if(editId && editId!==''){
-    const {error} = await sb.from('influencers').update(payload).eq('id', parseInt(editId));
+    const updatePayload = {...payload, updated_by: currentUserName(), updated_at: new Date().toISOString()};
+    const {error} = await sb.from('influencers').update(updatePayload).eq('id', parseInt(editId));
     if(error){ alert('수정 실패: '+error.message); return; }
     await loadInfs();
     showToast('수정되었습니다!');
@@ -991,7 +1005,8 @@ async function submitForm(){
     return;
   }
 
-  const {error} = await sb.from('influencers').insert([payload]);
+  const insertPayload = {...payload, created_by: currentUserName(), updated_by: currentUserName(), updated_at: new Date().toISOString()};
+  const {error} = await sb.from('influencers').insert([insertPayload]);
   if(error){ alert('저장 실패: '+error.message); return; }
   await loadInfs();
   showToast('인플루언서가 등록되었습니다!');
@@ -1131,7 +1146,9 @@ async function submitExcelRows(){
     if(!error) fields.categories.push(c);
   }
 
-  const {error} = await sb.from('influencers').insert(excelRows);
+  const nowIso = new Date().toISOString();
+  const rowsToInsert = excelRows.map(r => ({...r, created_by: currentUserName(), updated_by: currentUserName(), updated_at: nowIso}));
+  const {error} = await sb.from('influencers').insert(rowsToInsert);
   if(error){ status.textContent=''; alert('일괄 등록 실패: '+error.message); return; }
 
   const registeredCount = excelRows.length;
