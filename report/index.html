@@ -221,11 +221,25 @@ async function doSave(){
   }
 }
 
+/* 목록 화면에서는 계정마다 쌓인 이미지 등 무거운 보고서 데이터까지 전부
+   내려받으면 느려지므로, 목록 표시에 필요한 가벼운 필드만 먼저 불러온다.
+   실제 보고서 데이터(이미지 포함)는 그 계정을 열 때(hydrateAccount)만
+   개별적으로 불러온다. _light:true 는 아직 상세 데이터를 안 불러온
+   "껍데기" 계정이라는 표시이고, 이 상태에서는 절대 저장(업로드)하지
+   않는다 — doSave()의 변경분 비교 로직이 자연히 막아준다. */
 async function loadState(){
   try {
-    const { data, error } = await sb.from('report_accounts').select('id,data');
+    const { data, error } = await sb.from('report_accounts')
+      .select('id, company:data->>company, contractManager:data->>contractManager, workManager:data->>workManager, contractDate:data->>contractDate');
     if(error) throw error;
-    accounts = (data||[]).map(row => row.data);
+    accounts = (data||[]).map(row => ({
+      id: row.id,
+      company: row.company || '',
+      contractManager: row.contractManager || '',
+      workManager: row.workManager || '',
+      contractDate: row.contractDate || '',
+      _light: true
+    }));
     savedSnapshot = {};
     accounts.forEach(a => { savedSnapshot[a.id] = JSON.stringify(a); });
   } catch(e){
@@ -233,52 +247,80 @@ async function loadState(){
     accounts = [];
     showSaveStatus('loaderror');
   }
-  migrateAccounts();
+}
+
+/* id로 지정한 계정의 전체 데이터(이미지 포함 보고서 등)를 필요할 때만
+   불러와서 accounts 배열의 해당 항목을 완전한 데이터로 교체한다.
+   이미 불러온 계정이면 다시 서버에 안 물어보고 그대로 반환한다. */
+async function hydrateAccount(id){
+  const idx = accounts.findIndex(a=>a.id===id);
+  if(idx===-1) return null;
+  if(!accounts[idx]._light) return accounts[idx];
+  showSaveStatus('saving', '불러오는 중...');
+  try {
+    const { data, error } = await sb.from('report_accounts').select('data').eq('id', id).single();
+    if(error) throw error;
+    const full = data.data;
+    full.id = id;
+    accounts[idx] = full;
+    migrateOneAccount(accounts[idx]);
+    savedSnapshot[id] = JSON.stringify(accounts[idx]);
+    const el = document.getElementById('save-toast');
+    if(el) el.hidden = true;
+    return accounts[idx];
+  } catch(e){
+    console.error('계정 상세 불러오기 실패', e);
+    showSaveStatus('loaderror', '⚠️ 이 계정의 상세 데이터를 불러오지 못했습니다. 다시 시도해주세요.');
+    return null;
+  }
+}
+function migrateOneAccount(a){
+  let changed = false;
+  if(!Array.isArray(a.blogReports)){
+    const now = new Date().toISOString();
+    a.blogReports = a.blogReport ? [{ id: uid(), createdAt: now, updatedAt: now, ...a.blogReport }] : [];
+    delete a.blogReport;
+    changed = true;
+  }
+  a.blogReports.forEach(r=>{
+    if(!r.insights){ r.insights = { monthlyStats:'', viewTrend:'', demographics:'', inflow:'', popularRank:'' }; changed = true; }
+    if(!r.insightsEdited){ r.insightsEdited = { monthlyStats:false, viewTrend:false, demographics:false, inflow:false, popularRank:false }; changed = true; }
+    if(!r.keywordExposure){ r.keywordExposure = { rows:[blankKeywordRow()], images:[] }; changed = true; }
+    if(r.planEnabled === undefined){ r.planEnabled = false; changed = true; }
+    if(r.planMonth === undefined){ r.planMonth = ''; changed = true; }
+    if(!r.planCalendar){ r.planCalendar = { rows: [] }; changed = true; }
+  });
+  if(!Array.isArray(a.instagramReports)){ a.instagramReports = []; changed = true; }
+  if(!a.igHistory){ a.igHistory = { followers:{}, reach:{}, impressions:{} }; changed = true; }
+  a.instagramReports.forEach(r=>{
+    if(!r.contentInsights){ r.contentInsights = { rows: [] }; changed = true; }
+    if(!Array.isArray(r.featuredContents)){ r.featuredContents = [blankFeaturedContent()]; changed = true; }
+    if(!r.contentGrid){ r.contentGrid = { rows: [] }; changed = true; }
+    if(!r.planCalendar){ r.planCalendar = { rows: [] }; changed = true; }
+    if(!r.meta.planMonth){ r.meta.planMonth = shiftMonth(r.meta.targetMonth,1); changed = true; }
+    if(r.igInsightText === undefined){ r.igInsightText = ''; changed = true; }
+    if(!r.sections){ r.sections = { followerTrend:true, reachSummary:true, contentInsights:true, featured:true, contentGrid:true, plan:true }; changed = true; }
+  });
+  if(!Array.isArray(a.tistoryReports)){ a.tistoryReports = []; changed = true; }
+  if(!a.tistoryHistory){ a.tistoryHistory = { views:{} }; changed = true; }
+  a.tistoryReports.forEach(r=>{
+    if(!r.inflowSearch){ r.inflowSearch = blankInflowMap(TS_INFLOW_SEARCH_CATS); changed = true; }
+    if(!r.inflowOther){ r.inflowOther = blankInflowMap(TS_INFLOW_OTHER_CATS); changed = true; }
+    if(!r.weeklyContent){ r.weeklyContent = { rows: [] }; changed = true; }
+    if(!r.popularPosts){ r.popularPosts = { rows: [] }; changed = true; }
+    if(!r.posts){ r.posts = { rows: [] }; changed = true; }
+    if(!r.sections){ r.sections = { viewTrend:true, inflow:true, content:true, popularPosts:true, posts:true }; changed = true; }
+  });
+  if(!Array.isArray(a.otherReports)){ a.otherReports = []; changed = true; }
+  a.otherReports.forEach(r=>{
+    if(!r.items){ r.items = { rows: [] }; changed = true; }
+    if(r.meta.sectionTitle === undefined){ r.meta.sectionTitle = ''; changed = true; }
+  });
+  return changed;
 }
 function migrateAccounts(){
   let changed = false;
-  accounts.forEach(a=>{
-    if(!Array.isArray(a.blogReports)){
-      const now = new Date().toISOString();
-      a.blogReports = a.blogReport ? [{ id: uid(), createdAt: now, updatedAt: now, ...a.blogReport }] : [];
-      delete a.blogReport;
-      changed = true;
-    }
-    a.blogReports.forEach(r=>{
-      if(!r.insights){ r.insights = { monthlyStats:'', viewTrend:'', demographics:'', inflow:'', popularRank:'' }; changed = true; }
-      if(!r.insightsEdited){ r.insightsEdited = { monthlyStats:false, viewTrend:false, demographics:false, inflow:false, popularRank:false }; changed = true; }
-      if(!r.keywordExposure){ r.keywordExposure = { rows:[blankKeywordRow()], images:[] }; changed = true; }
-      if(r.planEnabled === undefined){ r.planEnabled = false; changed = true; }
-      if(r.planMonth === undefined){ r.planMonth = ''; changed = true; }
-      if(!r.planCalendar){ r.planCalendar = { rows: [] }; changed = true; }
-    });
-    if(!Array.isArray(a.instagramReports)){ a.instagramReports = []; changed = true; }
-    if(!a.igHistory){ a.igHistory = { followers:{}, reach:{}, impressions:{} }; changed = true; }
-    a.instagramReports.forEach(r=>{
-      if(!r.contentInsights){ r.contentInsights = { rows: [] }; changed = true; }
-      if(!Array.isArray(r.featuredContents)){ r.featuredContents = [blankFeaturedContent()]; changed = true; }
-      if(!r.contentGrid){ r.contentGrid = { rows: [] }; changed = true; }
-      if(!r.planCalendar){ r.planCalendar = { rows: [] }; changed = true; }
-      if(!r.meta.planMonth){ r.meta.planMonth = shiftMonth(r.meta.targetMonth,1); changed = true; }
-      if(r.igInsightText === undefined){ r.igInsightText = ''; changed = true; }
-      if(!r.sections){ r.sections = { followerTrend:true, reachSummary:true, contentInsights:true, featured:true, contentGrid:true, plan:true }; changed = true; }
-    });
-    if(!Array.isArray(a.tistoryReports)){ a.tistoryReports = []; changed = true; }
-    if(!a.tistoryHistory){ a.tistoryHistory = { views:{} }; changed = true; }
-    a.tistoryReports.forEach(r=>{
-      if(!r.inflowSearch){ r.inflowSearch = blankInflowMap(TS_INFLOW_SEARCH_CATS); changed = true; }
-      if(!r.inflowOther){ r.inflowOther = blankInflowMap(TS_INFLOW_OTHER_CATS); changed = true; }
-      if(!r.weeklyContent){ r.weeklyContent = { rows: [] }; changed = true; }
-      if(!r.popularPosts){ r.popularPosts = { rows: [] }; changed = true; }
-      if(!r.posts){ r.posts = { rows: [] }; changed = true; }
-      if(!r.sections){ r.sections = { viewTrend:true, inflow:true, content:true, popularPosts:true, posts:true }; changed = true; }
-    });
-    if(!Array.isArray(a.otherReports)){ a.otherReports = []; changed = true; }
-    a.otherReports.forEach(r=>{
-      if(!r.items){ r.items = { rows: [] }; changed = true; }
-      if(r.meta.sectionTitle === undefined){ r.meta.sectionTitle = ''; changed = true; }
-    });
-  });
+  accounts.forEach(a=>{ if(migrateOneAccount(a)) changed = true; });
   if(changed) saveState();
 }
 
@@ -437,8 +479,10 @@ function goTo(page){
   currentPage = page;
   render();
 }
-function openAccount(id){
+async function openAccount(id){
   currentAccountId = id;
+  const a = await hydrateAccount(id);
+  if(!a) return;
   goTo('account-detail');
 }
 function createBlogReport(accountId){
