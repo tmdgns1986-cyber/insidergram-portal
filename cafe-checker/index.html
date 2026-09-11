@@ -370,10 +370,12 @@ function checkExtension_OLD() {
 function requestCollect(url) {
   return new Promise((resolve, reject) => {
     const reqId = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    // 30초: background.js 쪽 최대 처리 시간(탭 로딩 대기 20초 + 안정화 대기 2초 + DOM 파싱)보다
+    // 여유 있게 길게 잡아, 정상적으로 처리 중인데도 프론트엔드가 먼저 포기해버리는 걸 방지.
     const timeout = setTimeout(() => {
       window.removeEventListener('message', handler);
-      reject(new Error('수집 시간 초과 (15초)'));
-    }, 15000);
+      reject(new Error('수집 시간 초과 (30초)'));
+    }, 30000);
     function handler(e) {
       if (e.data?.type === 'CAFE_CHECKER_RESULT' && e.data?.reqId === reqId) {
         clearTimeout(timeout);
