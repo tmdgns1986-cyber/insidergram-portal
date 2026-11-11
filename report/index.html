@@ -3271,7 +3271,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 function goHome(){ if(document.referrer && !document.referrer.endsWith(window.location.pathname)){ history.back(); } else { window.location.href='../'; } }
 async function checkAuth(){
   const {data:{session}} = await sb.auth.getSession();
-  if(!session){ window.location.href='../'; return; }
+  if(!session||!(sessionStorage.getItem('portal_logged_in')||document.cookie.split('; ').includes('ig_portal=1'))){try{localStorage.setItem('portal_return_to',location.href);}catch(e){} window.location.href='../'; return;}
   await loadState();
   render();
 }

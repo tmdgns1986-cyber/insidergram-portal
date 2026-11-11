@@ -530,10 +530,7 @@ async function showManualLogs(){
 
 async function checkAuth(){
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){
-    if(new URLSearchParams(location.search).get('id')){try{localStorage.setItem('portal_return_to',location.href);}catch(e){}}
-    window.location.href='../';return;
-  }
+  if(!session||!(sessionStorage.getItem('portal_logged_in')||document.cookie.split('; ').includes('ig_portal=1'))){try{localStorage.setItem('portal_return_to',location.href);}catch(e){} window.location.href='../'; return;}
   currentUser=session.user;
   let {data:roleData}=await sb.from('user_roles').select('*').eq('user_id',currentUser.id).single();
   if(!roleData){window.location.href='../';return;}
