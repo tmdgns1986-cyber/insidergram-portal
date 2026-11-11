@@ -120,6 +120,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .detail-body blockquote{border-left:3px solid #2563EB;padding:10px 14px;background:#EEF4FF;border-radius:0 8px 8px 0;margin:12px 0;font-size:13px;color:#555}
 .detail-body hr{border:none;border-top:1px solid #E8E8E5;margin:16px 0}
 .detail-body pre{background:#F5F5F3;border:1px solid #E8E8E5;border-radius:8px;padding:12px;font-family:monospace;font-size:12px;overflow-x:auto;margin-bottom:12px}
+.detail-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.share-btn{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border:1px solid #E0E0DC;border-radius:7px;background:#fff;font-size:12px;color:#555;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.share-btn:hover{border-color:#2563EB;color:#2563EB;background:#EEF4FF}
+.share-btn svg{width:13px;height:13px}
+.attach-alert{margin-top:14px;display:flex;align-items:center;gap:10px;padding:10px 14px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:8px;cursor:pointer;transition:background .15s}
+.attach-alert:hover{background:#FFEDD5}
+.attach-alert-ic{width:28px;height:28px;border-radius:50%;background:#F97316;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.attach-alert-ic svg{width:14px;height:14px}
+.attach-alert b{font-size:13px;color:#9A3412;white-space:nowrap}
+.attach-alert-names{font-size:12px;color:#C2410C;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.attach-alert-go{font-size:12px;color:#EA580C;font-weight:600;white-space:nowrap}
+.detail-attachments.flash{animation:attachFlash 1.6s ease}
+@keyframes attachFlash{0%,60%{background:#FFF7ED}100%{background:transparent}}
+.clip-badge{display:inline-flex;align-items:center;gap:2px;font-size:11px;color:#EA580C;font-weight:600;margin-left:6px;vertical-align:middle}
+.clip-badge svg{width:12px;height:12px}
 .detail-footer{padding:14px 24px;border-top:1px solid #F0F0EC;display:flex;align-items:center;justify-content:space-between}
 .back-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#888;cursor:pointer;background:none;border:none;font-family:inherit;padding:0;transition:color .15s}
 .back-btn:hover{color:#1a1a1a}
@@ -280,11 +295,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="detail-wrap">
           <div class="detail-head">
             <div class="detail-cat-badge" id="d-cat">-</div>
-            <div class="detail-title" id="d-title">-</div>
+            <div class="detail-title-row">
+              <div class="detail-title" id="d-title">-</div>
+              <button class="share-btn" onclick="copyManualLink()" title="이 매뉴얼 링크 복사">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 10a4 4 0 005.66 0l1.41-1.41a4 4 0 00-5.66-5.66L6 4.34"/><path d="M10 6a4 4 0 00-5.66 0L2.93 7.41a4 4 0 005.66 5.66L10 11.66"/></svg>
+                링크 복사
+              </button>
+            </div>
             <div class="detail-meta">
               <div class="detail-meta-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3 2.7-5 6-5s6 2 6 5"/></svg><span id="d-author">-</span></div>
               <div class="detail-meta-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="12" height="11" rx="1"/><line x1="5" y1="1" x2="5" y2="5"/><line x1="11" y1="1" x2="11" y2="5"/><line x1="2" y1="8" x2="14" y2="8"/></svg><span id="d-date">-</span></div>
               <div class="detail-meta-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z"/><circle cx="8" cy="8" r="2"/></svg><span id="d-views">-</span>회 열람</div>
+            </div>
+            <div class="attach-alert" id="d-attach-alert" style="display:none" onclick="scrollToAttachments()">
+              <div class="attach-alert-ic"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 7.5l-5.2 5.2a3.2 3.2 0 01-4.5-4.5L8.6 2.9a2.1 2.1 0 013 3L6.4 11.1a1 1 0 01-1.5-1.5L9.6 5"/></svg></div>
+              <b id="d-attach-count">첨부파일</b>
+              <span class="attach-alert-names" id="d-attach-names"></span>
+              <span class="attach-alert-go">바로 보기 ↓</span>
             </div>
           </div>
           <div class="detail-body" id="d-body"></div>
@@ -503,7 +530,10 @@ async function showManualLogs(){
 
 async function checkAuth(){
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){window.location.href='../';return;}
+  if(!session){
+    if(new URLSearchParams(location.search).get('id')){try{localStorage.setItem('portal_return_to',location.href);}catch(e){}}
+    window.location.href='../';return;
+  }
   currentUser=session.user;
   let {data:roleData}=await sb.from('user_roles').select('*').eq('user_id',currentUser.id).single();
   if(!roleData){window.location.href='../';return;}
@@ -514,7 +544,18 @@ async function checkAuth(){
   document.getElementById('s-role').textContent=[roleData.department,roleData.position].filter(Boolean).join(' · ')||(roleData.role==='admin'?'관리자':'일반 사용자');
   await loadNav();
   await loadAllManuals();
-
+  // 공유 링크(?id=)로 들어온 경우 해당 매뉴얼 열기
+  const sharedId=new URLSearchParams(location.search).get('id');
+  if(sharedId){
+    const orig=history.pushState;history.pushState=function(){};
+    try{await openDetail(sharedId,true);}finally{history.pushState=orig;}
+    if(currentManualId===sharedId)history.replaceState({page:'detail',id:sharedId},'',manualLink(sharedId));
+  }
+}
+async function openDetailNoPush(id){
+  const orig=history.pushState;
+  history.pushState=function(){};
+  try{await openDetail(id);}finally{history.pushState=orig;}
 }
 
 // ─── 네비게이션 ────────────────────────────────────────────────────────
@@ -592,7 +633,7 @@ function renderBoard(data,page){
       <div class="board-num">${num}</div>
       <div class="board-title-cell">
         <span class="board-cat-badge">${catName}</span>
-        <span class="board-title-main">${m.title}</span>
+        <span class="board-title-main">${m.title}</span>${(m.attachments||[]).length?`<span class="clip-badge" title="첨부파일 ${(m.attachments||[]).length}개"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 7.5l-5.2 5.2a3.2 3.2 0 01-4.5-4.5L8.6 2.9a2.1 2.1 0 013 3L6.4 11.1a1 1 0 01-1.5-1.5L9.6 5"/></svg>${(m.attachments||[]).length}</span>`:''}
         ${isNew?'<span class="new-badge">N</span>':''}
       </div>
       <div class="board-author">${m.author_name||'-'}</div>
@@ -621,10 +662,14 @@ function searchManuals(q){
 }
 
 // ─── 상세 보기 ─────────────────────────────────────────────────────────
-async function openDetail(id){
+async function openDetail(id,fromUrl=false){
   currentManualId=id;
   const {data:m}=await sb.from('manuals').select('*, manual_categories(name)').eq('id',id).single();
-  if(!m)return;
+  if(!m){
+    currentManualId=null;
+    if(fromUrl){showToast('삭제되었거나 없는 매뉴얼입니다.');history.replaceState({page:'list'},'',location.pathname);}
+    return;
+  }
   await sb.from('manuals').update({view_count:(m.view_count||0)+1}).eq('id',id);
   document.getElementById('d-cat').textContent=m.manual_categories?.name||'-';
   document.getElementById('d-title').textContent=m.title;
@@ -635,6 +680,14 @@ async function openDetail(id){
   const attachments=m.attachments||[];
   const attachWrap=document.getElementById('d-attachments');
   const attachList=document.getElementById('d-attach-list');
+  const attachAlert=document.getElementById('d-attach-alert');
+  if(attachments.length>0){
+    attachAlert.style.display='flex';
+    document.getElementById('d-attach-count').textContent=`첨부파일 ${attachments.length}개`;
+    document.getElementById('d-attach-names').textContent=attachments.map(f=>f.name).join(' · ');
+  }else{
+    attachAlert.style.display='none';
+  }
   if(attachments.length>0){
     attachWrap.style.display='block';
     attachList.innerHTML=attachments.map(f=>`
@@ -654,8 +707,25 @@ async function openDetail(id){
   const canDel=currentUserRole.role==='admin'||m.author_id===currentUser.id;
   document.getElementById('del-btn').style.display=canDel?'inline-flex':'none';
   document.getElementById('edit-btn').style.display=canDel?'inline-flex':'none';
-  showPage('detail');
+  showPage('detail',true,id);
   document.getElementById('page-title').textContent=m.title;
+  document.title=m.title+' · 업무 매뉴얼';
+}
+function manualLink(id){return location.origin+location.pathname+'?id='+encodeURIComponent(id);}
+async function copyManualLink(){
+  if(!currentManualId)return;
+  const url=manualLink(currentManualId);
+  try{await navigator.clipboard.writeText(url);}
+  catch(e){
+    const ta=document.createElement('textarea');ta.value=url;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(_){}ta.remove();
+  }
+  showToast('링크가 복사되었습니다. 카톡·메일에 붙여넣어 공유하세요.');
+}
+function scrollToAttachments(){
+  const el=document.getElementById('d-attachments');
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');
 }
 
 async function deleteManual(){
@@ -1161,13 +1231,18 @@ async function deleteCat(id,name){
 }
 
 // ─── 페이지 전환 ──────────────────────────────────────────────────────
-function showPage(name, push=true){
+function showPage(name, push=true, id=null){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  if(push) history.pushState({page:name}, '', '#'+name);
+  if(name!=='detail')document.title='업무 매뉴얼';
+  if(push){
+    const url=(name==='detail'&&id)?location.pathname+'?id='+encodeURIComponent(id):location.pathname+'#'+name;
+    history.pushState({page:name,id:id}, '', url);
+  }
 }
 window.addEventListener('popstate', function(e){
   const pg=(e.state&&e.state.page)||'list';
+  if(pg==='detail'&&e.state.id){openDetailNoPush(e.state.id);return;}
   showPage(pg, false);
   if(pg==='list'){
     document.getElementById('page-title').textContent=currentCatName||'전체 매뉴얼';
