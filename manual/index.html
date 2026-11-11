@@ -144,6 +144,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tool-sep{width:1px;height:18px;background:#E8E8E5;margin:0 3px;flex-shrink:0}
 .editor-area{min-height:200px;padding:14px;font-size:13px;color:#333;line-height:1.8;outline:none;font-family:inherit}
 .editor-area:empty:before{content:attr(data-placeholder);color:#bbb}
+.tool-btn.active{background:#1a1a1a;color:#fff}
+.tool-btn:disabled{opacity:.35;cursor:not-allowed}
+.html-src{display:none;width:100%;min-height:360px;padding:14px;border:none;outline:none;resize:vertical;font-family:Consolas,'D2Coding',monospace;font-size:12px;line-height:1.6;color:#1a1a1a;background:#FCFCFB;tab-size:2}
+.html-preview-wrap{display:none}
+.html-preview-note{padding:8px 14px;font-size:11px;color:#2563EB;background:#EEF4FF;border-bottom:1px solid #DCE7FB}
+.html-frame{display:block;width:100%;min-height:200px;border:none;background:#fff}
 .editor-area h1{font-size:20px;font-weight:600;margin:8px 0 6px}
 .editor-area h2{font-size:17px;font-weight:600;margin:8px 0 5px}
 .editor-area h3{font-size:15px;font-weight:600;margin:8px 0 4px}
@@ -377,9 +383,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
                     <option value="#D97706">🟡 주황</option>
                     <option value="#7C3AED">🟣 보라</option>
                   </select>
+                  <div class="tool-sep"></div>
+                  <button class="tool-btn" id="html-mode-btn" onclick="toggleHtmlMode()" title="HTML 코드 직접 입력/수정">&lt;/&gt; HTML</button>
+                  <button class="tool-btn" onclick="document.getElementById('html-file-input').click()" title="HTML 파일 불러오기">HTML 파일</button>
                   <input type="file" id="editor-img-input" accept="image/*" style="display:none" onchange="insertImgToEditor(this)">
+                  <input type="file" id="html-file-input" accept=".html,.htm,text/html" style="display:none" onchange="loadHtmlFile(this)">
                 </div>
                 <div class="editor-area" id="editor" contenteditable="true" data-placeholder="매뉴얼 내용을 입력하세요..."></div>
+                <textarea class="html-src" id="html-src" spellcheck="false" placeholder="HTML 코드를 붙여넣으세요. (&lt;html&gt;, &lt;style&gt;이 포함된 전체 문서도 가능)"></textarea>
+                <div class="html-preview-wrap" id="html-preview-wrap">
+                  <div class="html-preview-note">HTML 문서 미리보기 · 내용 수정은 상단 &lt;/&gt; HTML 버튼을 눌러 코드에서 하세요.</div>
+                  <iframe class="html-frame" id="html-preview" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"></iframe>
+                </div>
               </div>
             </div>
             <div class="form-row">
@@ -635,7 +650,7 @@ async function openDetail(id){
   } else {
     attachWrap.style.display='none';
   }
-  document.getElementById('d-body').innerHTML=m.content||'';
+  renderHtmlContent(document.getElementById('d-body'),m.content||'');
   const canDel=currentUserRole.role==='admin'||m.author_id===currentUser.id;
   document.getElementById('del-btn').style.display=canDel?'inline-flex':'none';
   document.getElementById('edit-btn').style.display=canDel?'inline-flex':'none';
@@ -661,7 +676,7 @@ async function editManual(){
   await loadCatsForWrite();
   document.getElementById('w-cat').value=m.category_id||'';
   document.getElementById('w-title').value=m.title;
-  document.getElementById('editor').innerHTML=m.content||'';
+  setEditorContent(m.content||'');
     setTimeout(() => {
       initEditor();
       document.getElementById('editor').querySelectorAll('img:not(.img-resize-wrap img)').forEach(img => makeResizable(img));
@@ -677,7 +692,7 @@ async function showWrite(){
   attachedImgs=[];attachedFiles=[];
   document.getElementById('img-list').innerHTML='';
   document.getElementById('file-list').innerHTML='';
-  document.getElementById('editor').innerHTML='';
+  setEditorContent('');
   setTimeout(initEditor, 100);
   document.getElementById('w-title').value='';
   document.getElementById('write-head-title').textContent='매뉴얼 등록';
@@ -700,7 +715,139 @@ async function loadCatsForWrite(){
   document.getElementById('w-cat').innerHTML='<option value="">카테고리 선택</option>'+(cats||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
 }
 
-function execCmd(cmd){document.getElementById('editor').focus();document.execCommand(cmd,false,null);}
+// ─── HTML 모드 / HTML 문서 지원 ───────────────────────────────────────
+let editorMode='visual'; // visual | source | preview
+let htmlDocSource='';     // preview 모드일 때 원본 HTML
+
+// <style>, <script>, <html> 등이 들어간 HTML은 페이지와 분리된 iframe으로 표시
+function isFullHtmlDoc(html){
+  return /<!doctype|<html[\s>]|<head[\s>]|<body[\s>]|<style[\s>]|<script[\s>]|<link[\s>]|<iframe[\s>]|<form[\s>]|<[^>]+\son[a-z]+\s*=/i.test(html||'');
+}
+// 붙여넣은 텍스트가 HTML 코드처럼 보이는지
+function looksLikeHtml(text){
+  const t=(text||'').trim();
+  return /^<(!doctype|html|head|body|div|p|h[1-6]|table|section|article|style|ul|ol|span|img|a|br|hr|header|main|footer|nav|figure|blockquote|pre|!--)/i.test(t) && /<\/?[a-z][^>]*>/i.test(t);
+}
+function cleanEditorHtml(){
+  const editorClone=document.getElementById('editor').cloneNode(true);
+  editorClone.querySelectorAll('.img-resize-wrap').forEach(wrap=>{
+    const img=wrap.querySelector('img');
+    if(img)wrap.parentNode.insertBefore(img,wrap);
+    wrap.remove();
+  });
+  editorClone.querySelectorAll('.resize-handle,.img-size-label').forEach(el=>el.remove());
+  return editorClone.innerHTML;
+}
+function getEditorContent(){
+  if(editorMode==='source')return document.getElementById('html-src').value;
+  if(editorMode==='preview')return htmlDocSource;
+  return cleanEditorHtml();
+}
+function setEditorMode(mode){
+  editorMode=mode;
+  document.getElementById('editor').style.display=mode==='visual'?'block':'none';
+  document.getElementById('html-src').style.display=mode==='source'?'block':'none';
+  document.getElementById('html-preview-wrap').style.display=mode==='preview'?'block':'none';
+  document.getElementById('html-mode-btn').classList.toggle('active',mode==='source');
+  document.querySelectorAll('.editor-toolbar .tool-btn, .editor-toolbar select').forEach(el=>{
+    if(el.id==='html-mode-btn'||el.title==='HTML 파일 불러오기')return;
+    el.disabled=mode!=='visual';
+  });
+}
+function setEditorContent(html){
+  html=html||'';
+  if(isFullHtmlDoc(html)){
+    htmlDocSource=html;
+    document.getElementById('editor').innerHTML='';
+    document.getElementById('html-src').value=html;
+    setEditorMode('preview');
+    renderHtmlFrame(document.getElementById('html-preview'),html);
+  }else{
+    htmlDocSource='';
+    document.getElementById('editor').innerHTML=html;
+    document.getElementById('html-src').value='';
+    setEditorMode('visual');
+  }
+}
+function toggleHtmlMode(){
+  if(editorMode==='source'){
+    // 코드 → 화면 적용
+    setEditorContent(document.getElementById('html-src').value);
+    setTimeout(initEditor,50);
+  }else{
+    const html=getEditorContent();
+    document.getElementById('html-src').value=html;
+    setEditorMode('source');
+    document.getElementById('html-src').focus();
+  }
+}
+function loadHtmlFile(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const cur=getEditorContent().trim();
+    if(cur&&cur!=='<br>'&&!confirm('현재 본문을 HTML 파일 내용으로 바꿀까요?')){input.value='';return;}
+    setEditorContent(String(reader.result||''));
+    setTimeout(initEditor,50);
+    const t=document.getElementById('w-title');
+    if(!t.value.trim()){
+      const m=String(reader.result||'').match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      t.value=(m&&m[1].trim())||file.name.replace(/\.html?$/i,'');
+    }
+    showToast('HTML 파일을 불러왔습니다.');
+    input.value='';
+  };
+  reader.readAsText(file,'utf-8');
+}
+// HTML 코드를 텍스트로 붙여넣으면 HTML로 적용
+document.addEventListener('paste',e=>{
+  if(e.target.id!=='editor'&&!e.target.closest?.('#editor'))return;
+  const cd=e.clipboardData;if(!cd)return;
+  if(cd.types&&Array.from(cd.types).includes('text/html'))return; // 일반 서식 복사는 기본 동작
+  const text=cd.getData('text/plain');
+  if(!looksLikeHtml(text))return;
+  if(!confirm('붙여넣은 내용이 HTML 코드입니다.\nHTML로 적용할까요? (취소 시 텍스트 그대로 붙여넣기)'))return;
+  e.preventDefault();
+  if(isFullHtmlDoc(text)){
+    const cur=cleanEditorHtml().trim();
+    if(cur&&cur!=='<br>'&&!confirm('전체 HTML 문서는 본문 전체를 대체합니다. 계속할까요?'))return;
+    setEditorContent(text);
+  }else{
+    document.execCommand('insertHTML',false,text);
+  }
+});
+
+// iframe 렌더 (높이 자동 맞춤)
+function renderHtmlFrame(frame,html){
+  const fid='hf'+Math.random().toString(36).slice(2);
+  frame.dataset.fid=fid;
+  frame.style.height='200px';
+  const inject=`<base target="_blank"><script>(function(){function s(){var h=Math.max(document.documentElement.scrollHeight,document.body?document.body.scrollHeight:0);parent.postMessage({__hf:'${fid}',h:h},'*');}window.addEventListener('load',s);window.addEventListener('resize',s);if(window.ResizeObserver)new ResizeObserver(s).observe(document.documentElement);setTimeout(s,300);setTimeout(s,1500);})();<\/script>`;
+  let doc=html;
+  if(/<head[^>]*>/i.test(doc))doc=doc.replace(/<head[^>]*>/i,m=>m+inject);
+  else if(/<html[^>]*>/i.test(doc))doc=doc.replace(/<html[^>]*>/i,m=>m+'<head><meta charset="utf-8">'+inject+'</head>');
+  else doc='<!DOCTYPE html><html><head><meta charset="utf-8">'+inject+'<style>body{margin:0;font-family:Pretendard,-apple-system,sans-serif}</style></head><body>'+doc+'</body></html>';
+  frame.srcdoc=doc;
+}
+window.addEventListener('message',e=>{
+  const d=e.data;if(!d||!d.__hf)return;
+  const f=document.querySelector(`iframe[data-fid="${d.__hf}"]`);
+  if(f&&f.contentWindow===e.source)f.style.height=Math.max(120,Math.ceil(d.h)+4)+'px';
+});
+function renderHtmlContent(el,html){
+  if(isFullHtmlDoc(html)){
+    el.innerHTML='';
+    const f=document.createElement('iframe');
+    f.className='html-frame';
+    f.setAttribute('sandbox','allow-scripts allow-popups allow-popups-to-escape-sandbox');
+    el.appendChild(f);
+    renderHtmlFrame(f,html);
+  }else{
+    el.innerHTML=html;
+  }
+}
+
+function execCmd(cmd){if(editorMode!=='visual')return;document.getElementById('editor').focus();document.execCommand(cmd,false,null);}
 function setFontSize(size){
   if(!size)return;
   document.getElementById('editor').focus();
@@ -932,15 +1079,7 @@ async function uploadImg(file){
 async function submitManual(){
   const catId=document.getElementById('w-cat').value;
   const title=document.getElementById('w-title').value.trim();
-  // 저장 전 리사이즈 wrap 정리 (img 태그만 남기고 wrap 제거)
-  const editorClone = document.getElementById('editor').cloneNode(true);
-  editorClone.querySelectorAll('.img-resize-wrap').forEach(wrap => {
-    const img = wrap.querySelector('img');
-    if (img) wrap.parentNode.insertBefore(img, wrap);
-    wrap.remove();
-  });
-  editorClone.querySelectorAll('.resize-handle,.img-size-label').forEach(el => el.remove());
-  const content = editorClone.innerHTML;
+  const content = getEditorContent().trim();
   if(!catId||!title||!content||content==='<br>'){showToast('그룹, 카테고리, 제목, 본문은 필수입니다.');return;}
   const name=currentUserRole.name||currentUser.email.split('@')[0];
   if(editingId){
