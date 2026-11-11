@@ -697,7 +697,7 @@ let periodMode='year';
 let periodYear=new Date().getFullYear();
 let periodMonth=new Date().getMonth()+1;
 
-function goHome(){ if(document.referrer && !document.referrer.endsWith(window.location.pathname)){ history.back(); } else { window.location.href='../'; } }
+function goHome(){ window.location.href='../'; }
 
 function setPeriodMode(mode){
   periodMode=mode;

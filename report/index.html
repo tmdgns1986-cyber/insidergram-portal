@@ -3268,7 +3268,7 @@ async function exportPDF(accountId, reportId, statusElId){
 const SUPABASE_URL='https://wykcorpvmnfjqbvqynla.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5a2NvcnB2bW5manFidnF5bmxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MTUzMzAsImV4cCI6MjA5MzM5MTMzMH0.oIGBdRj6sjSw8TvPb03NaEBemML8Y35CM5xo9NJ_q30';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-function goHome(){ if(document.referrer && !document.referrer.endsWith(window.location.pathname)){ history.back(); } else { window.location.href='../'; } }
+function goHome(){ window.location.href='../'; }
 async function checkAuth(){
   const {data:{session}} = await sb.auth.getSession();
   if(!session||!(sessionStorage.getItem('portal_logged_in')||document.cookie.split('; ').includes('ig_portal=1'))){try{localStorage.setItem('portal_return_to',location.href);}catch(e){} window.location.href='../'; return;}

@@ -1110,10 +1110,7 @@ function showToast(msg){
   const el=document.getElementById('toast'); document.getElementById('toast-msg').textContent=msg;
   el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2800);
 }
-function goHome(){
-  if(document.referrer && !document.referrer.endsWith(window.location.pathname)){ history.back(); }
-  else { window.location.href='../'; }
-}
+function goHome(){ window.location.href='../'; }
 
 /* ── 시작 ── */
 checkAuth();

@@ -288,7 +288,7 @@ const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let currentUser=null,currentUserRole=null,currentAccountId=null,pwVisible=false,allAccounts=[],toastTimer;
 
-function goHome(){ if(document.referrer && !document.referrer.endsWith(window.location.pathname)){ history.back(); } else { window.location.href='../'; } }
+function goHome(){ window.location.href='../'; }
 
 async function checkAuth(){
   const {data:{session}}=await sb.auth.getSession();

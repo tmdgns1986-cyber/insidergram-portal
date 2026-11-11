@@ -510,7 +510,7 @@ let attachedImgs=[];let attachedFiles=[];
 const PER_PAGE=15;
 let currentPage=1;
 
-function goHome(){ if(document.referrer && !document.referrer.endsWith(window.location.pathname)){ history.back(); } else { window.location.href='../'; } }
+function goHome(){ window.location.href='../'; }
 
 async function showManualLogs(){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
