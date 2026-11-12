@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>바이럴 조회수 체커 — 인사이더그램 컴퍼니</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0D0D0D;--bg2:#1e1e1e;--bg3:#2a2a2a;--border:#3a3a3a;--border2:#555;--blue:#2563EB;--blue-dark:#1d4ed8;--blue-dim:#0f1f3d;--blue-bright:#60a5fa;--text:#ffffff;--muted:#cccccc;--faint:#888888;--green:#22c55e;--green-dim:#052e16;--red:#f87171;--red-dim:#450a0a;--yellow:#fbbf24;--yellow-dim:#451a03;--purple:#a78bfa;--purple-dim:#2e1065}
@@ -70,13 +71,28 @@ tbody tr:hover{background:var(--bg3)}
 .del-btn{background:none;border:none;color:var(--faint);cursor:pointer;padding:2px 6px;border-radius:4px;font-size:12px;transition:all .15s}
 .del-btn:hover{background:var(--red-dim);color:var(--red)}
 #toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:12px 18px;font-size:13px;display:none;z-index:200;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+
+/* ── 포털 공통 밝은 테마 (레퍼런스 포털 기준으로 통일) ── */
+:root{--bg:#F5F6FA;--bg2:#ffffff;--bg3:#F5F6FA;--border:#E8EAF0;--border2:#D0D4E0;--blue-dim:#EFF6FF;--blue-bright:#2563EB;--text:#1A1D27;--muted:#6B7080;--faint:#9EA5B8;--green:#15803d;--green-dim:#DCFCE7;--red:#DC2626;--red-dim:#FEE2E2;--yellow:#92400E;--yellow-dim:#FEF3C7;--purple:#6D28D9;--purple-dim:#EDE9FE}
+.home-link{display:inline-flex;align-items:center;gap:4px;padding:4px 0;color:#6C63FF;font-size:12px;font-weight:500;text-decoration:none;white-space:nowrap}
+.home-link:hover{color:#5B53EE;text-decoration:underline}
+.guide-banner{border-color:#BFDBFE;color:#1E3A8A}
+.guide-banner strong{color:#1E3A8A}
+.upload-desc strong{color:var(--text)}
+.upload-area:hover,.upload-area.drag-over{background:#EFF6FF}
+.panel,.progress-wrap{border-color:#E8EAF0}
+.badge-wait{background:#F5F6FA;color:#6B7080;border-color:#E8EAF0}
+.badge-deleted{background:#FFEDD5;color:#C2410C}
+.ext-banner{background:#FEF3C7;border-color:#FDE68A;color:#92400E}
+#toast{box-shadow:0 8px 24px rgba(0,0,0,.12)}
+body.auth-pending{visibility:hidden}
 </style>
 </head>
-<body>
+<body class="auth-pending">
 
 <div id="header">
   <div class="header-left">
-    <a class="back-btn" href="../">← 포털 홈</a>
+    <a class="home-link" href="../"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><path d="M10 12L6 8l4-4"/></svg> 포털 홈으로</a>
     <div>
       <div class="page-title">바이럴 조회수 체커</div>
       <div class="page-sub">네이버 카페 게시글 조회수 · 댓글수 자동 수집</div>
@@ -107,7 +123,7 @@ tbody tr:hover{background:var(--bg3)}
   <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
     <div class="upload-icon">📂</div>
     <div class="upload-title">엑셀 파일을 여기에 끌어다 놓거나 클릭해서 선택하세요</div>
-    <div class="upload-desc">지원 형식: .xlsx, .xls · 컬럼: <strong style="color:#fff">카페명</strong> | <strong style="color:#fff">URL</strong></div>
+    <div class="upload-desc">지원 형식: .xlsx, .xls · 컬럼: <strong>카페명</strong> | <strong>URL</strong></div>
   </div>
   <input type="file" id="file-input" accept=".xlsx,.xls" onchange="onFileSelect(event)">
 
@@ -161,6 +177,17 @@ tbody tr:hover{background:var(--bg3)}
 
 <div id="toast"></div>
 
+<script>
+// 포털 로그인 확인 (다른 메뉴와 동일)
+(async()=>{
+  try{
+    const authSb=supabase.createClient('https://wykcorpvmnfjqbvqynla.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5a2NvcnB2bW5manFidnF5bmxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MTUzMzAsImV4cCI6MjA5MzM5MTMzMH0.oIGBdRj6sjSw8TvPb03NaEBemML8Y35CM5xo9NJ_q30');
+    const {data:{session}}=await authSb.auth.getSession();
+    if(!session||!(sessionStorage.getItem('portal_logged_in')||document.cookie.split('; ').includes('ig_portal=1'))){try{localStorage.setItem('portal_return_to',location.href);}catch(e){} location.href='../'; return;}
+    document.body.classList.remove('auth-pending');
+  }catch(e){location.href='../';}
+})();
+</script>
 <script>
 let rows = [];
 let collecting = false;
