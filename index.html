@@ -50,6 +50,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .nav-item:hover{background:var(--bg3);color:var(--text)}
 .nav-item.active{background:var(--blue-dim);color:var(--blue-bright);border-left-color:var(--blue);font-weight:500}
 .nav-item svg{width:15px;height:15px;flex-shrink:0}
+a.nav-item{text-decoration:none}
 #sidebar-footer{margin-top:auto;padding:14px 18px;border-top:1px solid var(--border)}
 .user-chip{display:flex;align-items:center;gap:9px}
 .user-avatar{width:30px;height:30px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
@@ -104,11 +105,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .log-text strong{color:var(--text);font-weight:500}
 .log-time{font-size:11px;color:var(--faint)}
 .right-panels{display:flex;flex-direction:column;gap:12px}
-.update-item{padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
+.update-item{position:relative;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
 .update-item:last-child{border-bottom:none}
 .update-date{font-size:10px;color:var(--blue-bright);font-weight:600;margin-bottom:3px}
 .update-text{color:var(--text);font-weight:500;margin-bottom:2px}
 .update-desc{font-size:11px;color:var(--muted);line-height:1.4}
+.update-edit-btn{position:absolute;top:8px;right:0;font-size:11px;color:#bbb;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer;font-family:inherit}
+.update-edit-btn:hover{color:#fff;border-color:var(--border2)}
+.update-item .update-text{padding-right:48px}
 .shortcut-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #444;border-radius:8px;cursor:pointer;transition:all .15s;text-decoration:none;margin-bottom:8px}
 .shortcut-item:last-child{margin-bottom:0}
 .shortcut-item:hover{border-color:var(--blue);background:var(--blue-dim)}
@@ -245,6 +249,30 @@ tbody tr:hover{background:var(--bg3)}
         <div class="nav-item active" data-page="dashboard">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>대시보드
         </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">업무 메뉴</div>
+        <a class="nav-item" href="./manual/">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2.5h10v11H3z"/><path d="M5.5 6h5M5.5 9h3"/></svg>업무 매뉴얼
+        </a>
+        <a class="nav-item" href="./account/">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="7" width="10" height="7" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/></svg>계정 관리
+        </a>
+        <a class="nav-item" href="./bid/">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="12" height="9" rx="1"/><path d="M5 7.5h6M5 10h4"/></svg>입찰 현황표
+        </a>
+        <a class="nav-item" href="./reference/">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M5 6.5h6M5 9.5h4"/></svg>레퍼런스 포털
+        </a>
+        <a class="nav-item" href="./cafe-checker/">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2.5 1.5"/></svg>바이럴 조회수 체커
+        </a>
+        <a class="nav-item" href="./influencer/">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5.5" r="2.7"/><path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5"/></svg>인플루언서 서치
+        </a>
+        <a class="nav-item" href="./report/">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="1.5" width="11" height="13" rx="1.2"/><path d="M5.5 11V8.5M8 11V6M10.5 11V7.5"/></svg>운영 보고서
+        </a>
       </div>
       <div class="nav-section" id="nav-admin-section" style="display:none">
         <div class="nav-label">관리</div>
@@ -403,7 +431,7 @@ tbody tr:hover{background:var(--bg3)}
       <div class="form-field"><label>내용</label><textarea id="u-desc" placeholder="업데이트 내용을 간략히 설명해주세요"></textarea></div>
       <div class="form-field"><label>구분</label><select id="u-type"><option value="new">신규 기능</option><option value="update">기능 개선</option><option value="fix">버그 수정</option></select></div>
     </div>
-    <div class="modal-footer"><button class="btn" onclick="closeUpdateModal()">취소</button><button class="btn btn-primary" onclick="submitUpdate()">등록하기</button></div>
+    <div class="modal-footer"><button class="btn" onclick="closeUpdateModal()">취소</button><button class="btn btn-primary" id="update-submit-btn" onclick="submitUpdate()">등록하기</button></div>
   </div>
 </div>
 
@@ -603,7 +631,7 @@ window.addEventListener('popstate', async(e)=>{
     history.replaceState({page:'dashboard'}, '', '#dashboard');
   }
 });
-document.querySelectorAll('.nav-item').forEach(el=>el.addEventListener('click',()=>navigate(el.dataset.page)));
+document.querySelectorAll('.nav-item[data-page]').forEach(el=>el.addEventListener('click',()=>navigate(el.dataset.page)));
 
 async function loadStats(){
   const {data:accounts}=await sb.from('accounts').select('id,is_active');
@@ -658,8 +686,10 @@ async function loadUpdates(){
   const updates=data||[];
   const typeColor={'new':'#3b82f6','update':'#22c55e','fix':'#f59e0b'};
   const typeLabel={'new':'신규','update':'개선','fix':'수정'};
+  window.__updates = Object.fromEntries(updates.map(u=>[u.id,u]));
+  const canEdit = currentUserRole && currentUserRole.role==='admin';
   const makeItem = u => `
-    <div class="update-item">
+    <div class="update-item">${canEdit?`<button class="update-edit-btn" onclick="openUpdateModal('${u.id}')">수정</button>`:''}
       <div class="update-date">${new Date(u.created_at).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'})} <span style="background:${typeColor[u.type]}33;color:${typeColor[u.type]};font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;margin-left:4px">${typeLabel[u.type]||'업데이트'}</span></div>
       <div class="update-text">${u.title}</div>
       ${u.description?`<div class="update-desc">${u.description}</div>`:''}
@@ -692,15 +722,34 @@ function toggleUpdateMore(){
   btn.textContent = expanded ? `더보기 ▾` : '접기 ▴';
 }
 
-function openUpdateModal(){document.getElementById('update-modal').classList.add('show');}
+let editingUpdateId=null;
+function openUpdateModal(id){
+  const u=id&&window.__updates?window.__updates[id]:null;
+  editingUpdateId=u?u.id:null;
+  document.querySelector('#update-modal .modal-header h2').textContent=u?'기능 업데이트 수정':'기능 업데이트 등록';
+  document.getElementById('update-submit-btn').textContent=u?'수정 저장':'등록하기';
+  if(u){
+    document.getElementById('u-title').value=u.title||'';
+    document.getElementById('u-desc').value=u.description||'';
+    document.getElementById('u-type').value=u.type||'new';
+  }
+  document.getElementById('update-modal').classList.add('show');
+}
 function closeUpdateModal(){
+  editingUpdateId=null;
   document.getElementById('update-modal').classList.remove('show');
   document.getElementById('u-title').value='';document.getElementById('u-desc').value='';document.getElementById('u-type').value='new';
 }
 async function submitUpdate(){
   const title=document.getElementById('u-title').value.trim();
   if(!title){showToast('제목을 입력해주세요.');return;}
-  await sb.from('portal_updates').insert({title,description:document.getElementById('u-desc').value.trim(),type:document.getElementById('u-type').value,created_by:currentUser.id});
+  const fields={title,description:document.getElementById('u-desc').value.trim(),type:document.getElementById('u-type').value};
+  if(editingUpdateId){
+    const {data,error}=await sb.from('portal_updates').update(fields).eq('id',editingUpdateId).select('id');
+    if(error||!data||!data.length){showToast('수정에 실패했습니다. 권한을 확인해주세요.');return;}
+    closeUpdateModal();showToast('✅ 업데이트가 수정되었습니다.');await loadUpdates();return;
+  }
+  await sb.from('portal_updates').insert({...fields,created_by:currentUser.id});
   closeUpdateModal();showToast('✅ 업데이트가 등록되었습니다.');await loadUpdates();
 }
 
