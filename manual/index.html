@@ -911,6 +911,11 @@ function renderHtmlContent(el,html){
     renderHtmlFrame(f,html);
   }else{
     el.innerHTML=html;
+    // 깨진 이미지(만료된 외부 주소 등)는 빈 칸 대신 숨김
+    el.querySelectorAll('img').forEach(img=>{
+      const hide=()=>{img.style.display='none';};
+      if(img.complete&&img.naturalWidth===0&&img.src)hide(); else img.addEventListener('error',hide,{once:true});
+    });
   }
 }
 
