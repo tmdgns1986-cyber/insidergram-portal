@@ -729,7 +729,7 @@ ${ctx}
   try {
     const res = await fetch('/.netlify/functions/claude2',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+(((await sb.auth.getSession()).data.session||{}).access_token||'')},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:prompt}]})
     });
     const raw = await res.json();
