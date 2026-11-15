@@ -54,7 +54,10 @@ async function accessToken() {
 async function get(path) {
   const token = await accessToken();
   const res = await fetch(API + path, { headers: { Authorization: 'Bearer ' + token } });
-  const data = await res.json().catch(() => ({}));
+  // 게시판·게시글 ID가 19자리라 숫자로 읽으면 반올림됨 → 큰 숫자는 문자열로 보존
+  const raw = await res.text();
+  let data = {};
+  try { data = JSON.parse(raw.replace(/(:\s*)(-?\d{16,})(?=\s*[,}\]])/g, '$1"$2"')); } catch { data = {}; }
   if (!res.ok) throw new Error(`네이버웍스 API 오류 ${res.status} ${path}: ${data.description || data.code || ''}`);
   return data;
 }
