@@ -17,6 +17,22 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) };
   }
 
+  // ── 보안: 로그인한 관리자만 호출 가능 ──
+  const authHeader = event.headers.authorization || event.headers.Authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token) {
+    return { statusCode: 401, body: JSON.stringify({ error: '로그인이 필요합니다.' }) };
+  }
+  const { data: caller, error: callerErr } = await sbAdmin.auth.getUser(token);
+  if (callerErr || !caller || !caller.user) {
+    return { statusCode: 401, body: JSON.stringify({ error: '로그인 정보가 유효하지 않습니다. 다시 로그인해 주세요.' }) };
+  }
+  const { data: callerRole } = await sbAdmin.from('user_roles').select('role').eq('user_id', caller.user.id).single();
+  if (!callerRole || callerRole.role !== 'admin') {
+    return { statusCode: 403, body: JSON.stringify({ error: '관리자만 사용할 수 있는 기능입니다.' }) };
+  }
+
+  const ALLOWED_ROLES = ['admin', 'part_leader', 'user'];
   const { action } = body;
 
   // 사용자 추가
@@ -24,6 +40,9 @@ exports.handler = async (event) => {
     const { email, password, name, department, position, role } = body;
     if (!email || !password || !name || !role) {
       return { statusCode: 400, body: JSON.stringify({ error: '필수 항목 누락' }) };
+    }
+    if (!ALLOWED_ROLES.includes(role)) {
+      return { statusCode: 400, body: JSON.stringify({ error: '허용되지 않은 권한 값입니다.' }) };
     }
 
     // Supabase Auth에 유저 생성
@@ -65,6 +84,20 @@ exports.handler = async (event) => {
     const { id, role } = body;
     if (!id || !role) {
       return { statusCode: 400, body: JSON.stringify({ error: '필수 항목 누락' }) };
+    }
+    if (!ALLOWED_ROLES.includes(role)) {
+      return { statusCode: 400, body: JSON.stringify({ error: '허용되지 않은 권한 값입니다.' }) };
+    }
+
+    // 안전장치: 마지막 관리자의 관리자 권한은 해제 불가
+    if (role !== 'admin') {
+      const { data: target } = await sbAdmin.from('user_roles').select('role').eq('id', id).single();
+      if (target && target.role === 'admin') {
+        const { count } = await sbAdmin.from('user_roles').select('id', { count: 'exact', head: true }).eq('role', 'admin');
+        if ((count || 0) <= 1) {
+          return { statusCode: 400, body: JSON.stringify({ error: '마지막 남은 관리자의 권한은 해제할 수 없습니다. 다른 관리자를 먼저 지정해 주세요.' }) };
+        }
+      }
     }
 
     const canViewPw = role === 'admin';
