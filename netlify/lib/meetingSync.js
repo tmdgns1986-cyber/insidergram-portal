@@ -36,7 +36,7 @@ async function findBoards() {
   return { map, names: boards.map(b => `${b.boardName}(${b.boardId})`) };
 }
 
-async function claudeJSON(prompt, maxTokens = 2000, timeoutMs = 18000) {
+async function claudeJSON(prompt, maxTokens = 1000, timeoutMs = 23000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -64,7 +64,7 @@ async function analyzePost(sb, post) {
 출력 형식:
 {"project":"프로젝트명(클라이언트/캠페인 단위, 짧게. 여러 프로젝트 공통 회의면 '공통/전사')",
  "meeting_date":"YYYY-MM-DD 또는 null","attendees":["이름"],
- "summary":"3~5문장 요약",
+ "summary":"2~3문장 요약",
  "decisions":["결정된 사항"],"open_issues":["보류·미결 사항"],
  "action_items":[{"owner":"담당자","task":"할 일","due":"기한 또는 null"}]}
 
@@ -72,7 +72,7 @@ async function analyzePost(sb, post) {
 작성자: ${post.author || ''}
 작성일: ${post.created_time || ''}
 본문:
-${(post.body || '').slice(0, 8000)}`;
+${(post.body || '').slice(0, 5000)}`;
   const a = await claudeJSON(prompt);
   await sb.from('meeting_posts').update({
     project: (a.project || '미분류').slice(0, 60),
