@@ -36,12 +36,15 @@ async function findBoards() {
   return { map, names: boards.map(b => `${b.boardName}(${b.boardId})`) };
 }
 
-async function claudeJSON(prompt, maxTokens = 1500) {
+async function claudeJSON(prompt, maxTokens = 1200, timeoutMs = 15000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
+    method: 'POST', signal: ctrl.signal,
     headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: ANALYZE_MODEL, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
   });
+  clearTimeout(timer);
   const data = await res.json();
   if (!res.ok) throw new Error('AI 분석 실패: ' + JSON.stringify(data.error || data).slice(0, 200));
   const text = (data.content || []).map(c => c.text || '').join('');
@@ -65,7 +68,7 @@ async function analyzePost(sb, post) {
 작성자: ${post.author || ''}
 작성일: ${post.created_time || ''}
 본문:
-${(post.body || '').slice(0, 12000)}`;
+${(post.body || '').slice(0, 8000)}`;
   const a = await claudeJSON(prompt);
   await sb.from('meeting_posts').update({
     project: (a.project || '미분류').slice(0, 60),
@@ -76,7 +79,7 @@ ${(post.body || '').slice(0, 12000)}`;
 }
 
 // deadlineMs 안에서 가능한 만큼 진행 (함수 시간 제한 대응, 다음 실행 때 이어서)
-async function runSync({ deadlineMs = 22000, full = false } = {}) {
+async function runSync({ deadlineMs = 22000, full = false, analyzeOnly = false } = {}) {
   const started = Date.now();
   const left = () => deadlineMs - (Date.now() - started);
   const sb = adminClient();
@@ -95,7 +98,7 @@ async function runSync({ deadlineMs = 22000, full = false } = {}) {
   await sb.from('meeting_posts').delete().lt('created_time', cutoff.toISOString());
 
   // 1) 목록 동기화 (새 글·수정된 글)
-  for (const key of ['all', 'comm']) {
+  for (const key of (analyzeOnly ? [] : ['all', 'comm'])) {
     const b = map[key];
     if (!b) continue;
     log.boards[key] = b.boardName;
@@ -145,7 +148,7 @@ async function runSync({ deadlineMs = 22000, full = false } = {}) {
     .not('body', 'is', null).is('analyzed_at', null)
     .order('created_time', { ascending: false }).limit(12);
   for (const p of needAI || []) {
-    if (left() < 9000) break;
+    if (left() < 16000) break;
     try { await analyzePost(sb, p); log.analyzed++; } catch (e) { log.errors.push(e.message); }
   }
 

@@ -8,7 +8,7 @@ exports.handler = async (event) => {
   if (auth.response) return auth.response;
   try {
     const body = JSON.parse(event.body || '{}');
-    const log = await runSync({ deadlineMs: 22000, full: !!body.full });
+    const log = await runSync({ deadlineMs: 23000, full: !!body.full, analyzeOnly: !!body.analyzeOnly });
     return json(200, { success: true, log });
   } catch (e) {
     return json(500, { error: e.message });
