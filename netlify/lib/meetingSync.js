@@ -2,7 +2,7 @@
 const nw = require('./naverworks');
 const { adminClient } = require('./auth');
 
-const ANALYZE_MODEL = 'claude-sonnet-4-6';
+const ANALYZE_MODEL = 'claude-haiku-4-5';
 
 function boardKeyOf(name) {
   const n = (name || '').replace(/\s+/g, '');
@@ -36,7 +36,7 @@ async function findBoards() {
   return { map, names: boards.map(b => `${b.boardName}(${b.boardId})`) };
 }
 
-async function claudeJSON(prompt, maxTokens = 1200, timeoutMs = 15000) {
+async function claudeJSON(prompt, maxTokens = 1200, timeoutMs = 18000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -148,7 +148,7 @@ async function runSync({ deadlineMs = 22000, full = false, analyzeOnly = false }
     .not('body', 'is', null).is('analyzed_at', null)
     .order('created_time', { ascending: false }).limit(12);
   for (const p of needAI || []) {
-    if (left() < 16000) break;
+    if (left() < 19000) break;
     try { await analyzePost(sb, p); log.analyzed++; } catch (e) { log.errors.push(e.message); }
   }
 

@@ -2,7 +2,7 @@
 // 보안: 요청자 권한으로 볼 수 있는 게시판의 회의록만 AI에 전달 (다른 게시판 내용은 서버에서 아예 제외)
 const { requireUser, json } = require('../lib/auth');
 
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = 'claude-haiku-4-5';
 
 function canView(role, board) {
   if (board === 'all') return true;
