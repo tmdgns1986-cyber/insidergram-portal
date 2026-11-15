@@ -1,9 +1,15 @@
+const { requireUser } = require('../lib/auth');
+
 exports.handler = async (event, context) => {
   context.callbackWaitsForEmptyEventLoop = false;
 
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
+
+  // 보안: 포털 직원만 사용 + 공개 웹 주소(http/https)만 허용
+  const auth = await requireUser(event);
+  if (auth.response) return auth.response;
 
   try {
     const { url } = JSON.parse(event.body || '{}');
@@ -15,7 +21,18 @@ exports.handler = async (event, context) => {
       };
     }
 
-    const res = await fetch(url, {
+    let target;
+    try { target = new URL(url); } catch { target = null; }
+    const host = target ? target.hostname.toLowerCase() : '';
+    const privateHost = !target || !['http:', 'https:'].includes(target.protocol)
+      || host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')
+      || /^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(host)
+      || /^172\.(1[6-9]|2\d|3[01])\./.test(host) || host.includes(':') || host === '';
+    if (privateHost) {
+      return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: '공개 웹 주소(http/https)만 확인할 수 있습니다.' }) };
+    }
+
+    const res = await fetch(target.toString(), {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; InsidergramBot/1.0)' }
     });
 
