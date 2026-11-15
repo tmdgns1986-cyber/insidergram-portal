@@ -1041,8 +1041,8 @@ async function addField(key){
 }
 async function delField(key,idx){
   const val = fields[key][idx];
-  const {error} = await sb.from('ref_fields').delete().eq('field_key',key).eq('value',val);
-  if(error){ showToast('삭제 실패: '+error.message); return; }
+  const {data:delRows,error:delErr} = await sb.from('ref_fields').delete().eq('field_key',key).eq('value',val).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 관리자만 삭제할 수 있어요.');return;}
   fields[key].splice(idx,1);
   renderFieldItems(key);
   showToast(`'${val}' 삭제되었습니다`);
@@ -1097,8 +1097,8 @@ function editRef(id){
 
 async function deleteRef(id){
   if(!confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-  const {error} = await sb.from('ref_data').delete().eq('id', id);
-  if(error){ alert('삭제 실패: '+error.message); return; }
+  const {data:delRows,error:delErr} = await sb.from('ref_data').delete().eq('id', id).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 작성자 또는 관리자만 삭제할 수 있어요.');return;}
   refs = refs.filter(r=>r.id!==id);
   closeModal();
   showToast('삭제되었습니다');
