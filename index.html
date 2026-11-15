@@ -778,6 +778,10 @@ function closeUserModal(){
   ['um-name','um-email','um-dept','um-position','um-pw'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('um-role').value='user';
 }
+async function adminAuthHeaders(){
+  const {data:{session}}=await sb.auth.getSession();
+  return {'Content-Type':'application/json','Authorization':'Bearer '+(session?session.access_token:'')};
+}
 async function addUser(){
   const name=document.getElementById('um-name').value.trim();
   const email=document.getElementById('um-email').value.trim();
@@ -791,7 +795,7 @@ async function addUser(){
   try{
     const res=await fetch('/.netlify/functions/admin-user',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:await adminAuthHeaders(),
       body:JSON.stringify({action:'create_user',email,password:pw,name,department:dept||null,position:position||null,role})
     });
     const result=await res.json();
@@ -809,7 +813,7 @@ async function toggleUserRole(id){
   try{
     const res=await fetch('/.netlify/functions/admin-user',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:await adminAuthHeaders(),
       body:JSON.stringify({action:'update_role',id,role})
     });
     const result=await res.json();
