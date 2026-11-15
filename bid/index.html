@@ -1076,7 +1076,8 @@ function ddayText(d){
 
 async function deleteCurrentBid(){
   if(!currentBidId||!confirm('정말 삭제하시겠습니까?'))return;
-  await sb.from('bids').delete().eq('id',currentBidId);
+  const {data:delRows,error:delErr}=await sb.from('bids').delete().eq('id',currentBidId).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 작성자 또는 관리자만 삭제할 수 있어요.');return;}
   showToast('입찰이 삭제되었습니다.');await loadBids();navigate('list');
 }
 
@@ -1250,7 +1251,8 @@ async function addCategory(){
 
 async function deleteCategory(id,name){
   if(!confirm(`"${name}" 카테고리를 삭제하시겠습니까?`))return;
-  await sb.from('bid_categories').delete().eq('id',id);
+  const {data:delRows,error:delErr}=await sb.from('bid_categories').delete().eq('id',id).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 관리자만 삭제할 수 있어요.');return;}
   showToast('카테고리가 삭제되었습니다.');
   await loadCategories();renderManage();
 }
@@ -1267,7 +1269,8 @@ async function addBidType(){
 
 async function deleteBidType(id,name){
   if(!confirm(`"${name}" 공고 구분을 삭제하시겠습니까?`))return;
-  await sb.from('bid_types').delete().eq('id',id);
+  const {data:delRows,error:delErr}=await sb.from('bid_types').delete().eq('id',id).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 관리자만 삭제할 수 있어요.');return;}
   showToast('공고 구분이 삭제되었습니다.');
   await loadBidTypes();renderManage();
 }
