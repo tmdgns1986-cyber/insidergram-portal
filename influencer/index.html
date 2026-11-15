@@ -1190,8 +1190,8 @@ function editInf(id){
 
 async function deleteInf(id){
   if(!confirm('정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
-  const {error} = await sb.from('influencers').delete().eq('id', id);
-  if(error){ alert('삭제 실패: '+error.message); return; }
+  const {data:delRows,error:delErr} = await sb.from('influencers').delete().eq('id', id).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 관리자만 삭제할 수 있어요.');return;}
   infs = infs.filter(r=>r.id!==id);
   closeModal();
   showToast('삭제되었습니다');
@@ -1258,8 +1258,8 @@ async function addField(){
 }
 async function delField(idx){
   const val = fields.categories[idx];
-  const {error} = await sb.from('influencer_fields').delete().eq('field_key','category').eq('value',val);
-  if(error){ showToast('삭제 실패: '+error.message); return; }
+  const {data:delRows,error:delErr} = await sb.from('influencer_fields').delete().eq('field_key','category').eq('value',val).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 관리자만 삭제할 수 있어요.');return;}
   fields.categories.splice(idx,1);
   renderFieldItems();
   showToast(`'${val}' 삭제되었습니다`);
