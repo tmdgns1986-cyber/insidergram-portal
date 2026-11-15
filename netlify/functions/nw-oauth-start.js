@@ -5,7 +5,7 @@ const { authorizeUrl } = require('../lib/naverworks');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
-  const auth = await requireUser(event, { adminOnly: true });
+  const auth = await requireUser(event, { adminOnly: true, meetingBeta: true });
   if (auth.response) return auth.response;
   const state = crypto.randomBytes(24).toString('hex');
   await auth.sb.from('meeting_sync_state').upsert({

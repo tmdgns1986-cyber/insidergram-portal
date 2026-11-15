@@ -4,7 +4,7 @@ const { runSync } = require('../lib/meetingSync');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
-  const auth = await requireUser(event, { adminOnly: true });
+  const auth = await requireUser(event, { adminOnly: true, meetingBeta: true });
   if (auth.response) return auth.response;
   try {
     const body = JSON.parse(event.body || '{}');

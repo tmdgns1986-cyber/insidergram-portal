@@ -101,6 +101,7 @@ function safeUrl(u){return /^https:\/\//.test(u||'')?u:'#';}
 async function init(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session||!(sessionStorage.getItem('portal_logged_in')||document.cookie.split('; ').includes('ig_portal=1'))){try{localStorage.setItem('portal_return_to',location.href);}catch(e){} location.href='../';return;}
+  if(!['635bb7fa-12be-4409-a92f-507af5f74d32','6fe5822b-7834-4a9f-a4db-f8144ebe6aeb'].includes(session.user.id)){alert('회의AI에이전트는 준비 중이에요.');location.href='../';return;}
   const {data:role}=await sb.from('user_roles').select('*').eq('user_id',session.user.id).single();
   me=role||{};
   canComm=me.role==='admin'||me.department==='관리자'||me.department==='커뮤니케이션팀';

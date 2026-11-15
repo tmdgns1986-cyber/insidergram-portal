@@ -14,7 +14,9 @@ function json(statusCode, obj) {
 }
 
 // 성공: { user, role, sb }  /  실패: { response }
-async function requireUser(event, { adminOnly = false } = {}) {
+const MEETING_BETA = ['635bb7fa-12be-4409-a92f-507af5f74d32', '6fe5822b-7834-4a9f-a4db-f8144ebe6aeb'];
+
+async function requireUser(event, { adminOnly = false, meetingBeta = false } = {}) {
   const h = event.headers || {};
   const authHeader = h.authorization || h.Authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
@@ -29,6 +31,7 @@ async function requireUser(event, { adminOnly = false } = {}) {
     .select('user_id, name, role, department').eq('user_id', data.user.id).single();
   if (!role) return { response: json(403, { error: '포털 직원 정보가 없습니다. 관리자에게 문의해 주세요.' }) };
   if (adminOnly && role.role !== 'admin') return { response: json(403, { error: '관리자만 사용할 수 있습니다.' }) };
+  if (meetingBeta && !MEETING_BETA.includes(data.user.id)) return { response: json(403, { error: '회의AI에이전트는 준비 중입니다.' }) };
   return { user: data.user, role, sb };
 }
 

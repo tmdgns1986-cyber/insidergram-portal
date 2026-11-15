@@ -38,7 +38,7 @@ function compact(p, withBody) {
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return json(405, { error: 'Method not allowed' });
-  const auth = await requireUser(event);
+  const auth = await requireUser(event, { meetingBeta: true });
   if (auth.response) return auth.response;
   const { role, sb } = auth;
 
