@@ -90,18 +90,24 @@ async function runSync({ deadlineMs = 22000, full = false } = {}) {
     return log;
   }
 
+  // 가져오는 범위: 오늘 기준 최근 3개월
+  const cutoff = new Date(Date.now() - 92 * 24 * 3600 * 1000);
+  await sb.from('meeting_posts').delete().lt('created_time', cutoff.toISOString());
+
   // 1) 목록 동기화 (새 글·수정된 글)
   for (const key of ['all', 'comm']) {
     const b = map[key];
     if (!b) continue;
     log.boards[key] = b.boardName;
     let cursor = '';
-    for (let page = 0; page < (full ? 50 : 3) && left() > 8000; page++) {
+    for (let page = 0; page < 30 && left() > 8000; page++) {
       let d;
       try { d = await nw.listPosts(b.boardId, cursor); }
       catch (e) { log.errors.push(`[${b.boardName} ${b.boardId}] ${e.message}`); break; }
-      const posts = d.posts || [];
-      if (!posts.length) break;
+      const all = d.posts || [];
+      if (!all.length) break;
+      const posts = all.filter(p => p.createdTime && new Date(p.createdTime) >= cutoff);
+      const reachedOld = posts.length < all.length;
       const rows = posts.map(p => ({
         board_key: key, board_id: String(b.boardId), post_id: String(p.postId),
         title: p.title, author: p.userName || null,
@@ -109,11 +115,13 @@ async function runSync({ deadlineMs = 22000, full = false } = {}) {
         url: `https://board.worksmobile.com/main/board/${b.boardId}/post/${p.postId}`,
         synced_at: new Date().toISOString()
       }));
-      const { error } = await sb.from('meeting_posts').upsert(rows, { onConflict: 'board_id,post_id' });
-      if (error) log.errors.push(error.message);
+      if (rows.length) {
+        const { error } = await sb.from('meeting_posts').upsert(rows, { onConflict: 'board_id,post_id' });
+        if (error) log.errors.push(error.message);
+      }
       log.listed += rows.length;
       cursor = d.responseMetaData && d.responseMetaData.nextCursor;
-      if (!cursor) break;
+      if (!cursor || reachedOld) break;
     }
   }
 
@@ -135,7 +143,7 @@ async function runSync({ deadlineMs = 22000, full = false } = {}) {
   const { data: needAI } = await sb.from('meeting_posts')
     .select('id, board_key, title, author, created_time, modified_time, body, analyzed_modified')
     .not('body', 'is', null).is('analyzed_at', null)
-    .order('created_time', { ascending: false }).limit(6);
+    .order('created_time', { ascending: false }).limit(12);
   for (const p of needAI || []) {
     if (left() < 9000) break;
     try { await analyzePost(sb, p); log.analyzed++; } catch (e) { log.errors.push(e.message); }
