@@ -89,6 +89,20 @@ async function runSync({ deadlineMs = 22000, full = false, analyzeOnly = false }
   const sb = adminClient();
   const log = { boards: {}, listed: 0, bodies: 0, analyzed: 0, errors: [] };
 
+  if (analyzeOnly) {
+    // 분석만: 게시판 조회 생략하고 바로 AI 분석
+    const { data: needAI } = await sb.from('meeting_posts')
+      .select('id, board_key, title, author, created_time, modified_time, body, analyzed_modified')
+      .not('body', 'is', null).is('analyzed_at', null)
+      .order('created_time', { ascending: false }).limit(1);
+    for (const p of needAI || []) {
+      try { await analyzePost(sb, p); log.analyzed++; } catch (e) { log.errors.push(e.message); }
+    }
+    const { count } = await sb.from('meeting_posts').select('id', { count: 'exact', head: true }).is('analyzed_at', null);
+    log.pendingAnalysis = count || 0;
+    return log;
+  }
+
   const { map, names } = await findBoards();
   log.allBoardNames = names;
   if (!map.all && !map.comm) {
@@ -152,7 +166,7 @@ async function runSync({ deadlineMs = 22000, full = false, analyzeOnly = false }
     .not('body', 'is', null).is('analyzed_at', null)
     .order('created_time', { ascending: false }).limit(12);
   for (const p of needAI || []) {
-    if (left() < 19000) break;
+    if (left() < 17000) break;
     try { await analyzePost(sb, p); log.analyzed++; } catch (e) { log.errors.push(e.message); }
   }
 
