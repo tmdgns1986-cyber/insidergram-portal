@@ -1,9 +1,15 @@
+const { requireUser } = require('../lib/auth');
+
 exports.handler = async (event, context) => {
   context.callbackWaitsForEmptyEventLoop = false;
 
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
+
+  // 보안: 포털에 로그인한 직원만 AI 사용 가능 (외부인의 API 키 무단 사용 방지)
+  const auth = await requireUser(event);
+  if (auth.response) return auth.response;
 
   const apiKey = process.env.ANTHROPIC_KEY;
   if (!apiKey) {
