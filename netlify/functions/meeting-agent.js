@@ -14,10 +14,14 @@ async function claude(prompt, maxTokens) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }],
+      tools: [{ name: 'output', description: '결과를 JSON으로 제출', input_schema: { type: 'object', additionalProperties: true } }],
+      tool_choice: { type: 'tool', name: 'output' } })
   });
   const data = await res.json();
   if (!res.ok) throw new Error('AI 오류: ' + JSON.stringify(data.error || data).slice(0, 200));
+  const tool = (data.content || []).find(c => c.type === 'tool_use');
+  if (tool && tool.input) return tool.input;
   const text = (data.content || []).map(c => c.text || '').join('');
   const s = text.indexOf('{'), e = text.lastIndexOf('}');
   return JSON.parse(text.slice(s, e + 1));
@@ -60,7 +64,7 @@ exports.handler = async (event) => {
   try {
     if (req.action === 'brief') {
       const out = await claude(`너는 회의 진행을 돕는 비서다. 아래는 "${req.project || '전체'}" 관련 지난 회의록이다(최신순). 오늘은 ${today}.
-이 자료만 근거로 판단하고, 없는 내용은 만들지 마라. JSON만 출력:
+이 자료만 근거로 판단하고, 없는 내용은 만들지 마라. output 도구로 제출(형식):
 {"flow":[{"date":"YYYY-MM-DD","title":"회의명","point":"핵심 한 줄","ref":"근거 ref"}],
  "decisions":[{"text":"결정사항","ref":"ref"}],
  "open_issues":[{"text":"미결/보류 사항","ref":"ref"}],
@@ -74,7 +78,7 @@ flow는 오래된→최신 순서로 최대 8개.
       const question = String(req.question || '').slice(0, 1000);
       if (!question) return json(400, { error: '질문을 입력해 주세요.' });
       const out = await claude(`너는 회의 중 질문에 답하는 비서다. 아래 회의록 자료만 근거로 답하라. 자료에 없으면 "회의록에서 찾지 못했습니다"라고 답하라.
-다른 게시판이나 자료 밖의 내용은 추측하지 마라. JSON만 출력: {"answer":"답변(2~5문장, 존댓말)","refs":["근거 ref"]}
+다른 게시판이나 자료 밖의 내용은 추측하지 마라. output 도구로 제출(형식): {"answer":"답변(2~5문장, 존댓말)","refs":["근거 ref"]}
 질문: ${question}
 자료: ${ctx}`, 1200);
       return json(200, { answer: out.answer, refs: (out.refs || []).map(r => posts.find(p => p.id === r)).filter(Boolean).map(p => ({ id: p.id, title: p.title, date: (p.created_time || '').slice(0, 10), url: p.url })) });

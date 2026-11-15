@@ -36,17 +36,21 @@ async function findBoards() {
   return { map, names: boards.map(b => `${b.boardName}(${b.boardId})`) };
 }
 
-async function claudeJSON(prompt, maxTokens = 1200, timeoutMs = 18000) {
+async function claudeJSON(prompt, maxTokens = 2000, timeoutMs = 18000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST', signal: ctrl.signal,
     headers: { 'Content-Type': 'application/json', 'x-api-key': process.env.ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: ANALYZE_MODEL, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: ANALYZE_MODEL, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }],
+      tools: [{ name: 'output', description: '결과를 JSON으로 제출', input_schema: { type: 'object', additionalProperties: true } }],
+      tool_choice: { type: 'tool', name: 'output' } })
   });
   clearTimeout(timer);
   const data = await res.json();
   if (!res.ok) throw new Error('AI 분석 실패: ' + JSON.stringify(data.error || data).slice(0, 200));
+  const tool = (data.content || []).find(c => c.type === 'tool_use');
+  if (tool && tool.input) return tool.input;
   const text = (data.content || []).map(c => c.text || '').join('');
   const s = text.indexOf('{'), e = text.lastIndexOf('}');
   return JSON.parse(text.slice(s, e + 1));
@@ -55,7 +59,7 @@ async function claudeJSON(prompt, maxTokens = 1200, timeoutMs = 18000) {
 async function analyzePost(sb, post) {
   const { data: projRows } = await sb.from('meeting_posts').select('project').eq('board_key', post.board_key).not('project', 'is', null);
   const known = [...new Set((projRows || []).map(r => r.project))].slice(0, 80);
-  const prompt = `다음은 광고·마케팅 대행사 회의록 게시글이다. 분석해서 JSON만 출력해라.
+  const prompt = `다음은 광고·마케팅 대행사 회의록 게시글이다. 분석해서 output 도구로 제출해라.
 기존 프로젝트명 목록(같은 프로젝트면 반드시 이 이름을 그대로 재사용): ${JSON.stringify(known)}
 출력 형식:
 {"project":"프로젝트명(클라이언트/캠페인 단위, 짧게. 여러 프로젝트 공통 회의면 '공통/전사')",
