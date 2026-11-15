@@ -467,8 +467,9 @@ async function deleteAccount(){
   if(!currentAccountId)return;
   if(!confirm('정말 삭제하시겠습니까?'))return;
   const {data:a}=await sb.from('accounts').select('title').eq('id',currentAccountId).single();
+  const {data:delRows,error:delErr}=await sb.from('accounts').delete().eq('id',currentAccountId).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 관리자만 삭제할 수 있어요.');return;}
   await sb.from('access_logs').insert({account_id:currentAccountId,account_title:a.title,user_email:currentUser.email,action:'계정 삭제'});
-  await sb.from('accounts').delete().eq('id',currentAccountId);
   closeModal();showToast('계정이 삭제되었습니다.');await loadAccounts();
 }
 
@@ -531,7 +532,8 @@ async function addCategory(){
 }
 async function deleteCategory(id,name){
   if(!confirm(`"${name}" 분류를 삭제하시겠습니까?`))return;
-  await sb.from('categories').delete().eq('id',id);
+  const {data:delRows,error:delErr}=await sb.from('categories').delete().eq('id',id).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 관리자만 삭제할 수 있어요.');return;}
   showToast('분류가 삭제되었습니다.');await loadCategoriesPage();
 }
 
