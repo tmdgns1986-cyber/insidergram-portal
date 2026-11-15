@@ -33,7 +33,7 @@ async function findBoards() {
     const k = boardKeyOf(b.boardName);
     if (k && !map[k]) map[k] = { boardId: String(b.boardId), boardName: b.boardName };
   }
-  return { map, names: boards.map(b => b.boardName) };
+  return { map, names: boards.map(b => `${b.boardName}(${b.boardId})`) };
 }
 
 async function claudeJSON(prompt, maxTokens = 1500) {
@@ -97,7 +97,9 @@ async function runSync({ deadlineMs = 22000, full = false } = {}) {
     log.boards[key] = b.boardName;
     let cursor = '';
     for (let page = 0; page < (full ? 50 : 3) && left() > 8000; page++) {
-      const d = await nw.listPosts(b.boardId, cursor);
+      let d;
+      try { d = await nw.listPosts(b.boardId, cursor); }
+      catch (e) { log.errors.push(`[${b.boardName} ${b.boardId}] ${e.message}`); break; }
       const posts = d.posts || [];
       if (!posts.length) break;
       const rows = posts.map(p => ({
