@@ -190,7 +190,14 @@ async function loadSyncState(){
   const v=data&&data.value;
   const when=v?new Date(v.at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'아직 없음';
   const err=v&&v.errors&&v.errors.length?`<div style="color:var(--red);margin-top:4px">⚠️ ${esc(v.errors[0])}</div>`:'';
-  document.getElementById('sync').innerHTML=`🔄 네이버웍스 자동 동기화 (15분마다)<br>마지막: ${esc(when)}${v?` · 분석 대기 ${esc(v.pendingAnalysis??'-')}건`:''}${err}<div style="margin-top:8px"><button class="btn" id="syncbtn" onclick="syncNow()">지금 동기화</button> <span style="font-size:10px">관리자 전용</span></div>`;
+  document.getElementById('sync').innerHTML=`🔄 네이버웍스 자동 동기화 (15분마다)<br>마지막: ${esc(when)}${v?` · 분석 대기 ${esc(v.pendingAnalysis??'-')}건`:''}${err}<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="syncbtn" onclick="syncNow()">지금 동기화</button><button class="btn" onclick="connectNW()">네이버웍스 연결</button></div><div style="font-size:10px;margin-top:4px">관리자 전용 · 연결은 처음 한 번만</div>`;
+}
+async function connectNW(){
+  try{
+    const res=await fetch('/.netlify/functions/nw-oauth-start',{method:'POST',headers:await authHeaders(),body:'{}'});
+    const r=await res.json();if(!res.ok)throw new Error(r.error||res.status);
+    location.href=r.url;
+  }catch(e){toast('연결 실패: '+e.message);}
 }
 async function syncNow(){
   const b=document.getElementById('syncbtn');b.disabled=true;b.textContent='동기화 중...';
@@ -202,6 +209,7 @@ async function syncNow(){
   await loadSyncState();await loadPosts();
 }
 
+(function(){const p=new URLSearchParams(location.search).get('nw');if(!p)return;history.replaceState(null,'',location.pathname);setTimeout(()=>toast(p==='ok'?'✅ 네이버웍스 연결 완료! 지금 동기화를 눌러 주세요.':'연결 실패 ('+p+') — 다시 시도해 주세요.'),800);})();
 init();
 </script>
 </body>
