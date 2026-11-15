@@ -398,6 +398,7 @@ tbody tr:hover{background:var(--bg3)}
       <div id="page-users" class="page">
         <div class="toolbar">
           <span style="font-size:13px;color:var(--muted);flex:1" id="user-count-text">사용자를 불러오는 중...</span>
+          <select id="user-dept-filter" onchange="renderUsers()"><option value="">전체 부서</option><option value="관리자">관리자</option><option value="커뮤니케이션팀">커뮤니케이션팀</option><option value="콘텐츠마케팅팀">콘텐츠마케팅팀</option><option value="__none">미지정</option></select>
           <button class="btn btn-primary" onclick="openUserModal()">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="11"/><line x1="5" y1="8" x2="11" y2="8"/></svg>사용자 추가
           </button>
@@ -445,7 +446,7 @@ tbody tr:hover{background:var(--bg3)}
       <div class="form-grid-2">
         <div class="form-field"><label>이름 <span class="required">*</span></label><input type="text" id="um-name" placeholder="홍길동"></div>
         <div class="form-field"><label>이메일 <span class="required">*</span></label><input type="email" id="um-email" placeholder="hong@company.com"></div>
-        <div class="form-field"><label>부서</label><input type="text" id="um-dept" placeholder="예: 마케팅팀"></div>
+        <div class="form-field"><label>부서</label><select id="um-dept"><option value="">미지정</option><option value="관리자">관리자</option><option value="커뮤니케이션팀">커뮤니케이션팀</option><option value="콘텐츠마케팅팀">콘텐츠마케팅팀</option></select></div>
         <div class="form-field"><label>직책</label><input type="text" id="um-position" placeholder="예: 대리"></div>
         <div class="form-field"><label>임시 비밀번호 <span class="required">*</span></label><input type="text" id="um-pw" placeholder="6자 이상"></div>
         <div class="form-field"><label>권한</label>
@@ -458,6 +459,29 @@ tbody tr:hover{background:var(--bg3)}
       </div>
     </div>
     <div class="modal-footer"><button class="btn" onclick="closeUserModal()">취소</button><button class="btn btn-primary" onclick="addUser()">사용자 추가</button></div>
+  </div>
+</div>
+
+<div id="user-edit-overlay" class="modal-overlay" onclick="if(event.target===this)closeUserEdit()">
+  <div class="modal-box" style="width:480px">
+    <div class="modal-header"><h2 id="ue-title">사용자 정보 수정</h2><button class="btn" onclick="closeUserEdit()">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="ue-id">
+      <div class="form-grid-2">
+        <div class="form-field"><label>부서</label><select id="ue-dept" onchange="renderUserEditPreview()"><option value="">미지정</option><option value="관리자">관리자</option><option value="커뮤니케이션팀">커뮤니케이션팀</option><option value="콘텐츠마케팅팀">콘텐츠마케팅팀</option></select></div>
+        <div class="form-field"><label>직책</label><input type="text" id="ue-position" placeholder="예: 대리"></div>
+      </div>
+      <div class="form-field"><label>메뉴 권한</label>
+        <select id="ue-role" onchange="renderUserEditPreview()">
+          <option value="user">일반 사용자 (조회·등록)</option>
+          <option value="part_leader">파트장 (조회·등록·시뮬레이터)</option>
+          <option value="admin">관리자 (전체 + 삭제·회원관리)</option>
+        </select>
+      </div>
+      <div id="ue-preview" style="background:#0f1f3d;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;font-size:12px;color:#93c5fd;line-height:1.7"></div>
+      <div style="font-size:11px;color:var(--faint);margin-top:8px">🔒 부서·권한은 관리자만 변경할 수 있고, 서버와 DB에서도 같은 규칙으로 막혀 있어요.</div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeUserEdit()">취소</button><button class="btn btn-primary" onclick="saveUserEdit()">저장</button></div>
   </div>
 </div>
 
@@ -753,22 +777,33 @@ async function submitUpdate(){
   closeUpdateModal();showToast('✅ 업데이트가 등록되었습니다.');await loadUpdates();
 }
 
+let allPortalUsers=[];
+const DEPT_BADGE={'관리자':'background:#3b0764;color:#d8b4fe','커뮤니케이션팀':'background:#052e16;color:#4ade80','콘텐츠마케팅팀':'background:#422006;color:#fbbf24'};
+function canViewCommMeetings(u){return u.role==='admin'||u.department==='관리자'||u.department==='커뮤니케이션팀';}
+function escHtml(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 async function loadUsers(){
   const {data}=await sb.from('user_roles').select('*').order('created_at');
-  const users=data||[];
-  document.getElementById('user-count-text').textContent=`총 ${users.length}명의 사용자가 등록되어 있습니다.`;
+  allPortalUsers=data||[];
+  renderUsers();
+}
+function renderUsers(){
+  const f=document.getElementById('user-dept-filter')?.value||'';
+  const users=allPortalUsers.filter(u=>!f||(f==='__none'?!u.department:u.department===f));
+  document.getElementById('user-count-text').textContent=`총 ${allPortalUsers.length}명의 사용자가 등록되어 있습니다.`+(f?` (필터: ${users.length}명)`:'');
   document.getElementById('user-list').innerHTML=users.length?users.map(u=>`
     <div class="user-row">
       <div class="user-avatar" style="width:38px;height:38px;font-size:13px">${(u.name||u.email).charAt(0).toUpperCase()}</div>
       <div style="flex:1">
         <div style="font-weight:500;color:var(--text)">${u.name||'(이름 없음)'}</div>
         <div style="font-size:11px;color:var(--muted);margin-top:2px">${u.email}</div>
-        ${u.department||u.position?`<div style="font-size:11px;color:var(--faint);margin-top:2px">${[u.department,u.position].filter(Boolean).join(' · ')}</div>`:''}
+        ${u.position?`<div style="font-size:11px;color:var(--faint);margin-top:2px">${escHtml(u.position)}</div>`:''}
       </div>
+      ${u.department?`<span class="role-badge" style="${DEPT_BADGE[u.department]||''}">${escHtml(u.department)}</span>`:'<span class="role-badge" style="border:1px dashed #666;color:#999">부서 미지정</span>'}
       ${u.must_change_password?'<span class="role-badge pill-warning">⚠️ 비밀번호 변경 필요</span>':''}
       <span class="role-badge ${u.role==='admin'?'role-admin':u.role==='part_leader'?'role-part-leader':'role-user'}">${u.role==='admin'?'관리자':u.role==='part_leader'?'파트장':'일반 사용자'}</span>
       <div>${u.role==='admin'?'<span class="perm-chip">전체 조회</span><span class="perm-chip">등록/수정</span><span class="perm-chip">삭제</span><span class="perm-chip">시뮬레이터</span>':u.role==='part_leader'?'<span class="perm-chip">조회</span><span class="perm-chip">등록</span><span class="perm-chip">시뮬레이터</span>':'<span class="perm-chip">조회</span><span class="perm-chip">등록</span>'}</div>
-      ${currentUserRole&&currentUserRole.role==='admin'?`<button class="btn" style="font-size:12px" onclick="toggleUserRole('${u.id}')">권한 변경</button>`:''}
+      <div><div style="font-size:10px;color:var(--faint);margin-bottom:3px">회의록 열람</div><span class="perm-chip">전체회의록&amp;미팅록</span><span class="perm-chip" style="${canViewCommMeetings(u)?'':'background:#1a1a1a;color:#666;text-decoration:line-through'}">커뮤니케이션팀</span></div>
+      ${currentUserRole&&currentUserRole.role==='admin'?`<button class="btn" style="font-size:12px" onclick="openUserEdit('${u.id}')">✏️ 수정</button>`:''}
     </div>`).join(''):'<div class="empty" style="padding:40px">등록된 사용자가 없습니다.</div>';
 }
 
@@ -804,22 +839,32 @@ async function addUser(){
   }catch(e){showToast('사용자 추가 실패: '+e.message);}
 }
 
-async function toggleUserRole(id){
-  const choice=prompt('권한을 선택하세요:\n1. 일반 사용자\n2. 파트장\n3. 관리자\n\n숫자를 입력하세요:');
-  if(!choice)return;
-  let role='user';
-  if(choice==='2')role='part_leader';
-  else if(choice==='3')role='admin';
+function openUserEdit(id){
+  const u=allPortalUsers.find(x=>x.id===id);if(!u)return;
+  document.getElementById('ue-id').value=u.id;
+  document.getElementById('ue-title').textContent=`사용자 정보 수정 — ${u.name||u.email}`;
+  document.getElementById('ue-dept').value=u.department||'';
+  document.getElementById('ue-position').value=u.position||'';
+  document.getElementById('ue-role').value=u.role||'user';
+  renderUserEditPreview();
+  document.getElementById('user-edit-overlay').classList.add('show');
+}
+function closeUserEdit(){document.getElementById('user-edit-overlay').classList.remove('show');}
+function renderUserEditPreview(){
+  const u={department:document.getElementById('ue-dept').value,role:document.getElementById('ue-role').value};
+  const ok=canViewCommMeetings(u);
+  const why=u.role==='admin'?'관리자 권한':u.department?u.department+' 소속':'';
+  document.getElementById('ue-preview').innerHTML='<b>이 설정으로 볼 수 있는 회의록</b><br>✅ 전체회의록&amp;미팅록<br>'+(ok?`✅ 커뮤니케이션팀 회의록 <span style="color:#888">(${escHtml(why)})</span>`:'🔒 커뮤니케이션팀 회의록 <span style="color:#888">(관리자·커뮤니케이션팀만)</span>');
+}
+async function saveUserEdit(){
+  const id=document.getElementById('ue-id').value;
+  const payload={action:'update_user',id,department:document.getElementById('ue-dept').value||null,position:document.getElementById('ue-position').value.trim(),role:document.getElementById('ue-role').value};
   try{
-    const res=await fetch('/.netlify/functions/admin-user',{
-      method:'POST',
-      headers:await adminAuthHeaders(),
-      body:JSON.stringify({action:'update_role',id,role})
-    });
+    const res=await fetch('/.netlify/functions/admin-user',{method:'POST',headers:await adminAuthHeaders(),body:JSON.stringify(payload)});
     const result=await res.json();
-    if(!res.ok||!result.success){showToast('권한 변경 실패: '+(result.error||'알 수 없는 오류'));return;}
-    showToast('권한이 변경되었습니다.');await loadUsers();
-  }catch(e){showToast('권한 변경 실패: '+e.message);}
+    if(!res.ok||!result.success){showToast('저장 실패: '+(result.error||'알 수 없는 오류'));return;}
+    closeUserEdit();showToast('사용자 정보가 저장되었습니다.');await loadUsers();
+  }catch(e){showToast('저장 실패: '+e.message);}
 }
 
 async function loadLogs(){
