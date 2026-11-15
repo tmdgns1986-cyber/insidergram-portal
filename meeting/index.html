@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>회의AI에이전트 — 인사이더그램 컴퍼니</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#0D0D0D;--bg2:#1e1e1e;--bg3:#2a2a2a;--border:#3a3a3a;--blue:#2563EB;--blue-dim:#0f1f3d;--blue-bright:#60a5fa;--text:#fff;--muted:#ccc;--faint:#888;--green:#4ade80;--amber:#fbbf24;--red:#f87171}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+header{display:flex;align-items:center;gap:12px;padding:12px 22px;border-bottom:1px solid var(--border);background:var(--bg2)}
+header a{color:var(--muted);text-decoration:none;font-size:13px}
+header h1{font-size:16px;font-weight:700}
+header .who{margin-left:auto;font-size:12px;color:var(--faint)}
+.wrap{display:grid;grid-template-columns:260px 1fr 380px;gap:14px;padding:14px 18px;height:calc(100vh - 53px)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto}
+.label{font-size:11px;font-weight:700;color:var(--faint);letter-spacing:.04em;margin:4px 0 8px}
+.board{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;cursor:pointer;font-size:13px}
+.board.on{border-color:var(--blue);background:var(--blue-dim);color:var(--blue-bright);font-weight:600}
+.board.lock{color:#666;cursor:not-allowed;background:#161616}
+.board small{margin-left:auto;font-size:11px;color:var(--faint)}
+.proj{padding:8px 10px;border-radius:7px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.proj:hover{background:var(--bg3)}
+.proj.on{background:var(--blue);color:#fff}
+.proj span{font-size:11px;opacity:.7;white-space:nowrap}
+.sync{font-size:11px;color:var(--faint);margin-top:14px;line-height:1.7;border-top:1px solid var(--border);padding-top:10px}
+.btn{padding:6px 12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit}
+.btn-primary{background:var(--blue);border-color:var(--blue)}
+.btn:disabled{opacity:.5;cursor:default}
+.scope{font-size:12px;background:var(--blue-dim);color:#93c5fd;border:1px solid #1e3a5f;border-radius:7px;padding:8px 10px;margin-bottom:14px}
+h2{font-size:16px;margin-bottom:4px}
+.sub{font-size:12px;color:var(--faint);margin-bottom:14px}
+.sec{margin-bottom:18px}
+.sec h3{font-size:13px;margin-bottom:8px;color:var(--muted)}
+.item{padding:8px 10px;border-radius:6px;background:var(--bg3);margin-bottom:6px;line-height:1.55;font-size:13px}
+.src{font-size:11px;color:var(--blue-bright);margin-left:6px;text-decoration:underline;cursor:pointer;white-space:nowrap}
+.badge{font-size:11px;padding:2px 7px;border-radius:10px;white-space:nowrap;margin-right:6px}
+.b-done{background:#052e16;color:var(--green)}.b-wait{background:#422006;color:var(--amber)}.b-late{background:#450a0a;color:var(--red)}.b-chk{background:var(--bg);color:var(--faint);border:1px solid var(--border)}
+.timeline{border-left:2px solid var(--border);padding-left:12px}
+.timeline div{margin-bottom:10px;font-size:13px;line-height:1.5}
+.timeline b{font-size:12px;color:var(--faint);display:block}
+.agenda .item{background:#2a2410;border:1px solid #4a3d12}
+.chat{display:flex;flex-direction:column;padding:0}
+.chat .head{padding:12px 14px;border-bottom:1px solid var(--border);font-weight:700;font-size:13px}
+.msgs{flex:1;overflow:auto;padding:14px}
+.m{margin-bottom:12px;max-width:94%;line-height:1.55;font-size:13px;white-space:pre-wrap}
+.m.me{margin-left:auto;background:var(--blue);padding:8px 12px;border-radius:12px 12px 2px 12px}
+.m.ai{background:var(--bg3);padding:9px 12px;border-radius:12px 12px 12px 2px}
+.m .ref{margin-top:8px;font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px}
+.m .ref a{color:var(--blue-bright)}
+.input{border-top:1px solid var(--border);padding:10px;display:flex;gap:8px}
+.input input{flex:1;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit}
+.empty{color:var(--faint);font-size:13px;padding:30px 10px;text-align:center;line-height:1.7}
+.loading{color:var(--faint);font-size:13px;padding:20px 0}
+.postlist a{display:block;color:var(--muted);font-size:12px;padding:5px 0;text-decoration:none;border-bottom:1px solid #262626}
+.postlist a:hover{color:var(--blue-bright)}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;padding:10px 16px;border-radius:8px;font-size:13px;display:none;z-index:9}
+</style>
+</head>
+<body>
+<header>
+  <a href="../">← 포털</a>
+  <h1>🤖 회의AI에이전트</h1>
+  <span class="who" id="who">확인 중...</span>
+</header>
+<div class="wrap">
+  <div class="card">
+    <div class="label">① 회의 게시판</div>
+    <div id="boards"></div>
+    <div class="label" style="margin-top:16px">② 프로젝트</div>
+    <div id="projects"><div class="loading">불러오는 중...</div></div>
+    <div class="sync" id="sync"></div>
+  </div>
+
+  <div class="card" id="brief">
+    <div class="empty">왼쪽에서 프로젝트를 고르면<br>지난 회의 흐름·결정사항·미결 사항·할 일을 정리해 드려요.</div>
+  </div>
+
+  <div class="card chat">
+    <div class="head">💬 회의 중에 물어보기</div>
+    <div class="msgs" id="msgs"><div class="empty">프로젝트를 고른 뒤 질문하세요.<br>예: "지난번에 단가 얼마로 정했지?"</div></div>
+    <div class="input"><input id="q" placeholder="질문 입력 후 Enter" onkeydown="if(event.key==='Enter')ask()"><button class="btn btn-primary" onclick="ask()">전송</button></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://wykcorpvmnfjqbvqynla.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5a2NvcnB2bW5manFidnF5bmxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MTUzMzAsImV4cCI6MjA5MzM5MTMzMH0.oIGBdRj6sjSw8TvPb03NaEBemML8Y35CM5xo9NJ_q30';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const BOARDS={all:'전체회의록&미팅록',comm:'커뮤니케이션팀 회의록'};
+let me=null, canComm=false, board='all', project=null, posts=[], refMap={}, projNames=[];
+
+function esc(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2600);}
+async function authHeaders(){const s=(await sb.auth.getSession()).data.session;return {'Content-Type':'application/json','Authorization':'Bearer '+(s?s.access_token:'')};}
+function safeUrl(u){return /^https:\/\//.test(u||'')?u:'#';}
+
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session||!(sessionStorage.getItem('portal_logged_in')||document.cookie.split('; ').includes('ig_portal=1'))){try{localStorage.setItem('portal_return_to',location.href);}catch(e){} location.href='../';return;}
+  const {data:role}=await sb.from('user_roles').select('*').eq('user_id',session.user.id).single();
+  me=role||{};
+  canComm=me.role==='admin'||me.department==='관리자'||me.department==='커뮤니케이션팀';
+  document.getElementById('who').textContent=`${me.name||session.user.email} · 볼 수 있는 회의록 ${canComm?2:1}개`;
+  renderBoards();
+  await loadPosts();
+  if(me.role==='admin') loadSyncState();
+}
+
+function renderBoards(){
+  document.getElementById('boards').innerHTML=Object.entries(BOARDS).map(([k,name])=>{
+    const locked=k==='comm'&&!canComm;
+    return `<div class="board ${board===k?'on':''} ${locked?'lock':''}" ${locked?'title="관리자·커뮤니케이션팀만 볼 수 있어요"':`onclick="selectBoard('${k}')"`}>${locked?'🔒':k==='all'?'📋':'💬'} ${esc(name)}<small id="cnt-${k}">${locked?'권한 없음':''}</small></div>`;
+  }).join('');
+}
+
+async function selectBoard(k){
+  if(k==='comm'&&!canComm)return;
+  board=k;project=null;renderBoards();
+  document.getElementById('brief').innerHTML='<div class="empty">왼쪽에서 프로젝트를 고르세요.</div>';
+  document.getElementById('msgs').innerHTML='<div class="empty">프로젝트를 고른 뒤 질문하세요.</div>';
+  await loadPosts();
+}
+
+async function loadPosts(){
+  // DB 보안 규칙(RLS)으로 권한 없는 게시판 글은 애초에 내려오지 않음
+  const {data,error}=await sb.from('meeting_posts').select('id,board_key,project,title,created_time,url').eq('board_key',board).order('created_time',{ascending:false}).limit(1000);
+  if(error){document.getElementById('projects').innerHTML=`<div class="empty">불러오기 실패: ${esc(error.message)}</div>`;return;}
+  posts=data||[];
+  const c=document.getElementById('cnt-'+board); if(c)c.textContent=posts.length+'건';
+  const groups={};
+  posts.forEach(p=>{const k=p.project||'⏳ 분석 대기';(groups[k]=groups[k]||[]).push(p);});
+  const names=Object.keys(groups).sort((a,b)=>(groups[b][0].created_time||'').localeCompare(groups[a][0].created_time||''));
+  projNames=names;
+  document.getElementById('projects').innerHTML=names.length?names.map((n,i)=>`<div class="proj ${project===n?'on':''}" onclick="selectProject(projNames[${i}])">${esc(n)}<span>${groups[n].length}건</span></div>`).join(''):'<div class="empty">아직 가져온 회의록이 없어요.<br>네이버웍스 연동 후 자동으로 채워집니다.</div>';
+}
+
+async function selectProject(n){
+  if(n==='⏳ 분석 대기'){toast('AI 분석이 끝나면 프로젝트별로 자동 분류돼요.');return;}
+  project=n;await loadPosts();
+  const list=posts.filter(p=>p.project===n);
+  refMap={};list.forEach(p=>refMap[p.id]=p);
+  document.getElementById('brief').innerHTML=`<div class="scope">🔐 검색 범위: <b>${esc(BOARDS[board])}</b> · ${esc(n)} 회의록 ${list.length}건만 사용합니다</div><h2>${esc(n)} — 회의 브리핑</h2><div class="sub">AI가 지난 회의록을 정리하는 중...</div><div class="loading">⏳ 10~20초 정도 걸려요</div>`;
+  document.getElementById('msgs').innerHTML=`<div class="m ai">"${esc(n)}" 회의록 ${list.length}건 기준으로 답할게요. 궁금한 걸 물어보세요.</div>`;
+  try{
+    const res=await fetch('/.netlify/functions/meeting-agent',{method:'POST',headers:await authHeaders(),body:JSON.stringify({action:'brief',board,project:n})});
+    const r=await res.json();
+    if(!res.ok)throw new Error(r.error||res.status);
+    renderBrief(n,list,r.brief||{});
+  }catch(e){document.getElementById('brief').querySelector('.loading').textContent='브리핑 실패: '+e.message;}
+}
+
+function refLink(id){const p=refMap[id];if(!p)return '';return `<a class="src" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">${esc((p.created_time||'').slice(5,10))} 회의록 ↗</a>`;}
+function statusBadge(s){const m={'완료':'b-done','진행중':'b-wait','기한지남':'b-late'};return `<span class="badge ${m[s]||'b-chk'}">${esc(s||'확인필요')}</span>`;}
+
+function renderBrief(n,list,b){
+  const last=list[0]?(list[0].created_time||'').slice(0,10):'';
+  const sec=(title,arr,fn,cls='')=>arr&&arr.length?`<div class="sec ${cls}"><h3>${title}</h3>${arr.map(fn).join('')}</div>`:'';
+  document.getElementById('brief').innerHTML=`
+    <div class="scope">🔐 검색 범위: <b>${esc(BOARDS[board])}</b> 게시판의 "${esc(n)}" 회의록만 · 다른 게시판 내용은 사용하지 않습니다</div>
+    <h2>${esc(n)} — 회의 브리핑</h2><div class="sub">지난 회의 ${list.length}건 기준 · 최근 회의 ${esc(last)}</div>
+    ${b.flow&&b.flow.length?`<div class="sec"><h3>🕒 지난 회의 흐름</h3><div class="timeline">${b.flow.map(f=>`<div><b>${esc(f.date)} ${esc(f.title)}</b>${esc(f.point)} ${refLink(f.ref)}</div>`).join('')}</div></div>`:''}
+    ${sec('✅ 지금까지 결정된 것',b.decisions,d=>`<div class="item">${esc(d.text)} ${refLink(d.ref)}</div>`)}
+    ${sec('⏸ 아직 정하지 못한 것',b.open_issues,d=>`<div class="item">${esc(d.text)} ${refLink(d.ref)}</div>`)}
+    ${sec('👤 담당자별 할 일 점검',b.action_items,a=>`<div class="item">${statusBadge(a.status)}<b>${esc(a.owner||'담당 미정')}</b> — ${esc(a.task)}${a.due?` <span style="color:var(--faint)">(${esc(a.due)})</span>`:''} ${refLink(a.ref)}</div>`)}
+    ${sec('📌 오늘 안건 제안',b.agenda,(a,i)=>`<div class="item">${i+1}. ${esc(a)}</div>`,'agenda')}
+    <div class="sec postlist"><h3>📄 원문 회의록 (${list.length})</h3>${list.map(p=>`<a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">${esc((p.created_time||'').slice(0,10))} · ${esc(p.title)}</a>`).join('')}</div>`;
+}
+
+async function ask(){
+  const q=document.getElementById('q').value.trim();if(!q)return;
+  if(!project){toast('먼저 왼쪽에서 프로젝트를 골라 주세요.');return;}
+  const box=document.getElementById('msgs');
+  box.insertAdjacentHTML('beforeend',`<div class="m me">${esc(q)}</div><div class="m ai" id="pending">⏳ 회의록 확인 중...</div>`);
+  document.getElementById('q').value='';box.scrollTop=box.scrollHeight;
+  try{
+    const res=await fetch('/.netlify/functions/meeting-agent',{method:'POST',headers:await authHeaders(),body:JSON.stringify({action:'ask',board,project,question:q})});
+    const r=await res.json();if(!res.ok)throw new Error(r.error||res.status);
+    const refs=(r.refs||[]).map(p=>`<a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">[${esc(BOARDS[board])}] ${esc(p.date)} ${esc(p.title)} ↗</a>`).join('<br>');
+    document.getElementById('pending').outerHTML=`<div class="m ai">${esc(r.answer||'')}${refs?`<div class="ref">📄 근거<br>${refs}</div>`:''}</div>`;
+  }catch(e){document.getElementById('pending').outerHTML=`<div class="m ai">답변 실패: ${esc(e.message)}</div>`;}
+  box.scrollTop=box.scrollHeight;
+}
+
+async function loadSyncState(){
+  const {data}=await sb.from('meeting_sync_state').select('*').eq('key','last_run').maybeSingle();
+  const v=data&&data.value;
+  const when=v?new Date(v.at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'아직 없음';
+  const err=v&&v.errors&&v.errors.length?`<div style="color:var(--red);margin-top:4px">⚠️ ${esc(v.errors[0])}</div>`:'';
+  document.getElementById('sync').innerHTML=`🔄 네이버웍스 자동 동기화 (15분마다)<br>마지막: ${esc(when)}${v?` · 분석 대기 ${esc(v.pendingAnalysis??'-')}건`:''}${err}<div style="margin-top:8px"><button class="btn" id="syncbtn" onclick="syncNow()">지금 동기화</button> <span style="font-size:10px">관리자 전용</span></div>`;
+}
+async function syncNow(){
+  const b=document.getElementById('syncbtn');b.disabled=true;b.textContent='동기화 중...';
+  try{
+    const res=await fetch('/.netlify/functions/meeting-sync-now',{method:'POST',headers:await authHeaders(),body:JSON.stringify({})});
+    const r=await res.json();if(!res.ok)throw new Error(r.error||res.status);
+    toast(`가져온 글 ${r.log.listed}건 · 본문 ${r.log.bodies}건 · 분석 ${r.log.analyzed}건`);
+  }catch(e){toast('동기화 실패: '+e.message);}
+  await loadSyncState();await loadPosts();
+}
+
+init();
+</script>
+</body>
+</html>

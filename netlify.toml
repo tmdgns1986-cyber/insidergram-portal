@@ -4,3 +4,12 @@
 
 [functions."claude"]
   timeout = 26
+
+[functions."meeting-sync"]
+  schedule = "*/15 * * * *"
+
+[functions."meeting-sync-now"]
+  timeout = 26
+
+[functions."meeting-agent"]
+  timeout = 26
