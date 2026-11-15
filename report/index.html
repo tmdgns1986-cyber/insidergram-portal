@@ -1575,7 +1575,7 @@ async function callClaude2(content, tools){
   if(tools) body.tools = tools;
   const res = await fetch('/.netlify/functions/claude2', {
     method:'POST',
-    headers:{ 'Content-Type':'application/json' },
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+(((await sb.auth.getSession()).data.session||{}).access_token||'') },
     body: JSON.stringify(body)
   });
   const data = await res.json();
@@ -1621,7 +1621,7 @@ async function aiFetchPostTitle(accountId, rowId, btn){
   try {
     const res = await fetch('/.netlify/functions/fetch-title', {
       method:'POST',
-      headers:{ 'Content-Type':'application/json' },
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+(((await sb.auth.getSession()).data.session||{}).access_token||'') },
       body: JSON.stringify({ url: row.url })
     });
     const data = await res.json();
