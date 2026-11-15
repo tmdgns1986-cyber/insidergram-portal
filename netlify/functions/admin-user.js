@@ -33,6 +33,8 @@ exports.handler = async (event) => {
   }
 
   const ALLOWED_ROLES = ['admin', 'part_leader', 'user'];
+  const ALLOWED_DEPTS = ['관리자', '커뮤니케이션팀', '콘텐츠마케팅팀'];
+  const normDept = (d) => (d === undefined || d === null || d === '' ? null : d);
   const { action } = body;
 
   // 사용자 추가
@@ -43,6 +45,9 @@ exports.handler = async (event) => {
     }
     if (!ALLOWED_ROLES.includes(role)) {
       return { statusCode: 400, body: JSON.stringify({ error: '허용되지 않은 권한 값입니다.' }) };
+    }
+    if (normDept(department) !== null && !ALLOWED_DEPTS.includes(department)) {
+      return { statusCode: 400, body: JSON.stringify({ error: '허용되지 않은 부서입니다.' }) };
     }
 
     // Supabase Auth에 유저 생성
@@ -63,7 +68,7 @@ exports.handler = async (event) => {
       user_id: userId,
       email,
       name,
-      department: department || null,
+      department: normDept(department),
       position: position || null,
       role,
       can_view_password: canViewPw,
@@ -106,6 +111,39 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: error.message }) };
     }
 
+    return { statusCode: 200, body: JSON.stringify({ success: true }) };
+  }
+
+  // 사용자 정보 수정 (부서·직책·권한)
+  if (action === 'update_user') {
+    const { id, department, position, role } = body;
+    if (!id || !role) {
+      return { statusCode: 400, body: JSON.stringify({ error: '필수 항목 누락' }) };
+    }
+    if (!ALLOWED_ROLES.includes(role)) {
+      return { statusCode: 400, body: JSON.stringify({ error: '허용되지 않은 권한 값입니다.' }) };
+    }
+    if (normDept(department) !== null && !ALLOWED_DEPTS.includes(department)) {
+      return { statusCode: 400, body: JSON.stringify({ error: '허용되지 않은 부서입니다.' }) };
+    }
+    if (role !== 'admin') {
+      const { data: target } = await sbAdmin.from('user_roles').select('role').eq('id', id).single();
+      if (target && target.role === 'admin') {
+        const { count } = await sbAdmin.from('user_roles').select('id', { count: 'exact', head: true }).eq('role', 'admin');
+        if ((count || 0) <= 1) {
+          return { statusCode: 400, body: JSON.stringify({ error: '마지막 남은 관리자의 권한은 해제할 수 없습니다. 다른 관리자를 먼저 지정해 주세요.' }) };
+        }
+      }
+    }
+    const { error } = await sbAdmin.from('user_roles').update({
+      department: normDept(department),
+      position: (position || '').trim() || null,
+      role,
+      can_view_password: role === 'admin'
+    }).eq('id', id);
+    if (error) {
+      return { statusCode: 400, body: JSON.stringify({ error: error.message }) };
+    }
     return { statusCode: 200, body: JSON.stringify({ success: true }) };
   }
 
