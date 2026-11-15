@@ -876,7 +876,7 @@ async function loadBidTypes(){
 }
 
 async function loadUsers(){
-  const {data}=await sb.from('user_roles').select('*').order('name');
+  const {data}=await sb.rpc('list_staff'); // 이름·부서만 (보안)
   allUsers=data||[];
   // 담당자 드롭다운 업데이트
   // 등록 폼 담당자 드롭다운
