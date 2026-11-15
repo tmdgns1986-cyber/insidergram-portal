@@ -772,7 +772,8 @@ function scrollToAttachments(){
 
 async function deleteManual(){
   if(!currentManualId||!confirm('정말 삭제하시겠습니까?'))return;
-  await sb.from('manuals').delete().eq('id',currentManualId);
+  const {data:delRows,error:delErr}=await sb.from('manuals').delete().eq('id',currentManualId).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 작성자 또는 관리자만 삭제할 수 있어요.');return;}
   showToast('매뉴얼이 삭제되었습니다.');
   showList();
   await loadAllManuals();
@@ -1254,7 +1255,8 @@ async function addGroup(){
 
 async function deleteGroup(id,name){
   if(!confirm(`"${name}" 그룹과 하위 카테고리/매뉴얼이 모두 삭제됩니다. 계속할까요?`))return;
-  await sb.from('manual_groups').delete().eq('id',id);
+  const {data:delRows,error:delErr}=await sb.from('manual_groups').delete().eq('id',id).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 관리자만 삭제할 수 있어요.');return;}
   showToast('그룹이 삭제되었습니다.');
   await loadModalGroups();
 }
@@ -1272,7 +1274,8 @@ async function addCategory(){
 
 async function deleteCat(id,name){
   if(!confirm(`"${name}" 카테고리와 하위 매뉴얼이 모두 삭제됩니다. 계속할까요?`))return;
-  await sb.from('manual_categories').delete().eq('id',id);
+  const {data:delRows,error:delErr}=await sb.from('manual_categories').delete().eq('id',id).select('id');
+  if(delErr||!delRows||!delRows.length){showToast(delErr?'삭제 실패: '+delErr.message:'삭제 권한이 없습니다. 관리자만 삭제할 수 있어요.');return;}
   showToast('카테고리가 삭제되었습니다.');
   await loadModalCats();
 }
