@@ -169,6 +169,22 @@ tbody tr:hover{background:var(--bg3)}
 .loading{text-align:center;padding:30px;color:var(--faint);font-size:13px}
 .empty{text-align:center;padding:24px;color:var(--faint);font-size:12px}
 #toast{position:fixed;bottom:24px;right:24px;background:var(--bg2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:12px 18px;font-size:13px;display:none;z-index:200;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+/* ── 메인 개편 (2026-11-16): 그룹형 메뉴 ── */
+.groups{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
+.grp{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;min-height:206px}
+.grp-h{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;padding:0 4px}
+.grp-h i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.app{display:flex;align-items:center;gap:12px;padding:10px;border-radius:9px;text-decoration:none;color:var(--text);transition:background .15s}
+.app:hover{background:var(--bg3)}
+.app:hover .app-ar{color:var(--blue-bright);transform:translateX(2px)}
+.app-ic{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.app-ic svg{width:18px;height:18px}
+.app-t{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600}
+.app-d{display:block;font-size:11.5px;color:var(--faint);margin-top:1px}
+.app-new{font-size:9px;font-weight:700;background:var(--blue);color:#fff;border-radius:8px;padding:1px 6px}
+.app-ar{margin-left:auto;color:#555;font-size:14px;transition:all .15s}
+.c-blue{background:#0f1f3d;color:#60a5fa}.c-purple{background:#2e1065;color:#a78bfa}.c-green{background:#052e16;color:#4ade80}
+@media (max-width:900px){.groups{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -311,62 +327,24 @@ tbody tr:hover{background:var(--bg3)}
           </div>
         </div>
         <div class="section-label">업무 메뉴</div>
-        <div class="menu-grid">
-          <a class="menu-card active" href="./manual/">
-            <div class="menu-badge badge-live">운영중</div>
-            <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><line x1="6" y1="8" x2="14" y2="8"/><line x1="6" y1="11" x2="11" y2="11"/></svg></div>
-            <div class="menu-title">업무 매뉴얼</div>
-            <div class="menu-desc">사내 업무 프로세스 가이드</div>
-            <div class="menu-arrow">→</div>
-          </a>
-          <a class="menu-card active" href="./account/">
-            <div class="menu-badge badge-live">운영중</div>
-            <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.5"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></svg></div>
-            <div class="menu-title">계정 관리</div>
-            <div class="menu-desc">업무용 계정 통합 관리 시스템</div>
-            <div class="menu-arrow">→</div>
-          </a>
-          <a class="menu-card active" href="./bid/">
-            <div class="menu-badge badge-live">운영중</div>
-            <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.5"><rect x="3" y="5" width="14" height="10" rx="1"/><path d="M7 9h6M7 12h4"/></svg></div>
-            <div class="menu-title">입찰 현황표</div>
-            <div class="menu-desc">프로젝트 입찰 현황 관리</div>
-            <div class="menu-arrow">→</div>
-          </a>
-          <a class="menu-card active" id="menu-meeting" href="./meeting/">
-            <div class="menu-badge badge-live">NEW</div>
-            <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.5"><rect x="3" y="3.5" width="14" height="10" rx="1.5"/><path d="M7 17h6M10 13.5V17M6.5 7.5h7M6.5 10h4"/></svg></div>
-            <div class="menu-title">회의AI에이전트</div>
-            <div class="menu-desc">네이버웍스 회의록 자동 정리·회의 중 질문</div>
-            <div class="menu-arrow">→</div>
-          </a>
-          <a class="menu-card active" href="./reference/">
-            <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M7 8h6M7 11h4"/><circle cx="14" cy="14" r="3" fill="#1a2744" stroke="#fff" stroke-width="1.2"/><path d="M13 14h2M14 13v2" stroke="#fff" stroke-width="1"/></svg></div>
-            <div class="menu-title">레퍼런스 포털</div>
-            <div class="menu-desc">AI 기반 캠페인 레퍼런스 검색 및 관리</div>
-            <div class="menu-arrow">→</div>
-          </a>
-          <a class="menu-card active" href="./cafe-checker/">
-            <div class="menu-badge badge-live">운영중</div>
-            <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/><path d="M6 3.5C7.2 2.6 8.5 2 10 2"/></svg></div>
-            <div class="menu-title">바이럴 조회수 체커</div>
-            <div class="menu-desc">카페 게시글 조회수·댓글수 자동 수집</div>
-            <div class="menu-arrow">→</div>
-          </a>
-          <a class="menu-card active" href="./influencer/">
-            <div class="menu-badge badge-live">운영중</div>
-            <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.5"><circle cx="10" cy="7" r="3.2"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg></div>
-            <div class="menu-title">인플루언서 서치</div>
-            <div class="menu-desc">AI 기반 인플루언서 검색 및 관리</div>
-            <div class="menu-arrow">→</div>
-          </a>
-          <a class="menu-card active" href="./report/">
-            <div class="menu-badge badge-live">운영중</div>
-            <div class="menu-icon"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.5"><rect x="3" y="2" width="14" height="16" rx="1.5"/><path d="M6.5 13.5v-3M10 13.5v-6M13.5 13.5v-4.5"/></svg></div>
-            <div class="menu-title">운영 보고서</div>
-            <div class="menu-desc">블로그·인스타·티스토리 등 월간 운영 보고서 작성</div>
-            <div class="menu-arrow">→</div>
-          </a>
+        <div class="groups">
+          <div class="grp">
+            <div class="grp-h"><i style="background:#60a5fa"></i>업무 관리</div>
+            <a class="app" href="./manual/"><span class="app-ic c-blue"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="10" height="12" rx="1.2"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3"/></svg></span><span><span class="app-t">업무 매뉴얼</span><span class="app-d">사내 업무 프로세스 가이드</span></span><span class="app-ar">→</span></a>
+            <a class="app" href="./account/"><span class="app-ic c-blue"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="7" width="9" height="7" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/></svg></span><span><span class="app-t">계정 관리</span><span class="app-d">업무용 계정 통합 관리</span></span><span class="app-ar">→</span></a>
+            <a class="app" href="./bid/"><span class="app-ic c-blue"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3.5" width="12" height="9" rx="1"/><path d="M5 7h6M5 9.5h3.5"/></svg></span><span><span class="app-t">입찰 현황표</span><span class="app-d">프로젝트 입찰 현황 관리</span></span><span class="app-ar">→</span></a>
+          </div>
+          <div class="grp">
+            <div class="grp-h"><i style="background:#a78bfa"></i>AI 도구</div>
+            <a class="app" href="./meeting/" id="menu-meeting"><span class="app-ic c-purple"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2.5" width="12" height="8.5" rx="1.5"/><path d="M5 14h6M8 11v3M5 6h6M5 8.5h4"/></svg></span><span><span class="app-t">회의AI에이전트 <span class="app-new">NEW</span></span><span class="app-d">지난 회의록 정리·회의 중 질문</span></span><span class="app-ar">→</span></a>
+            <a class="app" href="./reference/"><span class="app-ic c-purple"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/></svg></span><span><span class="app-t">레퍼런스 포털</span><span class="app-d">캠페인 레퍼런스 AI 검색</span></span><span class="app-ar">→</span></a>
+            <a class="app" href="./influencer/"><span class="app-ic c-purple"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5.5" r="2.5"/><path d="M3 14c0-2.8 2.2-4.5 5-4.5s5 1.7 5 4.5"/></svg></span><span><span class="app-t">인플루언서 서치</span><span class="app-d">AI 인플루언서 검색·관리</span></span><span class="app-ar">→</span></a>
+          </div>
+          <div class="grp">
+            <div class="grp-h"><i style="background:#4ade80"></i>운영·성과</div>
+            <a class="app" href="./cafe-checker/"><span class="app-ic c-green"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5"/></svg></span><span><span class="app-t">바이럴 조회수 체커</span><span class="app-d">카페 조회수·댓글수 자동 수집</span></span><span class="app-ar">→</span></a>
+            <a class="app" href="./report/"><span class="app-ic c-green"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="1.5" width="11" height="13" rx="1.2"/><path d="M5.5 11V8.5M8 11V6M10.5 11V7.5"/></svg></span><span><span class="app-t">운영 보고서</span><span class="app-d">블로그·인스타 월간 보고서 작성</span></span><span class="app-ar">→</span></a>
+          </div>
         </div>
         <div class="bottom-grid">
           <div class="panel">
@@ -678,13 +656,15 @@ async function loadStats(){
   document.getElementById('stat-logs').textContent=logs?logs.length:0;
 }
 
+function escH(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
 async function loadRecentLogs(){
   const {data}=await sb.from('portal_access_logs').select('*').eq('action','로그인').order('accessed_at',{ascending:false}).limit(200);
   const logs=data||[];
   const makeLogItem = l => `
     <div class="log-item">
       <div class="log-dot" style="background:#2563EB"></div>
-      <div class="log-text"><strong>${l.user_name||l.user_email}</strong>님이 포털에 로그인</div>
+      <div class="log-text"><strong>${escH(l.user_name||l.user_email)}</strong>님이 포털에 로그인</div>
       <div class="log-time" title="${formatKST(l.accessed_at)}">${timeAgo(l.accessed_at)}</div>
     </div>`;
   if(!logs.length){
@@ -725,8 +705,8 @@ async function loadUpdates(){
   const makeItem = u => `
     <div class="update-item">${canEdit?`<button class="update-edit-btn" onclick="openUpdateModal('${u.id}')">수정</button>`:''}
       <div class="update-date">${new Date(u.created_at).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'})} <span style="background:${typeColor[u.type]}33;color:${typeColor[u.type]};font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;margin-left:4px">${typeLabel[u.type]||'업데이트'}</span></div>
-      <div class="update-text">${u.title}</div>
-      ${u.description?`<div class="update-desc">${u.description}</div>`:''}
+      <div class="update-text">${escH(u.title)}</div>
+      ${u.description?`<div class="update-desc">${escH(u.description)}</div>`:''}
     </div>`;
   if(!updates.length){
     document.getElementById('update-list').innerHTML='<div class="empty">등록된 업데이트가 없습니다.</div>';
