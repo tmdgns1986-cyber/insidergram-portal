@@ -6,97 +6,185 @@
 <title>회의AI에이전트 — 인사이더그램 컴퍼니</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{--bg:#0D0D0D;--bg2:#1e1e1e;--bg3:#2a2a2a;--border:#3a3a3a;--blue:#2563EB;--blue-dim:#0f1f3d;--blue-bright:#60a5fa;--text:#fff;--muted:#ccc;--faint:#888;--green:#4ade80;--amber:#fbbf24;--red:#f87171}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;background:var(--bg);color:var(--text);font-size:14px}
-header{display:flex;align-items:center;gap:12px;padding:12px 22px;border-bottom:1px solid var(--border);background:var(--bg2)}
-header a{color:var(--muted);text-decoration:none;font-size:13px}
-header h1{font-size:16px;font-weight:700}
-header .who{margin-left:auto;font-size:12px;color:var(--faint)}
-.wrap{display:grid;grid-template-columns:240px minmax(0,1fr) minmax(0,1.15fr);gap:14px;padding:14px 18px;height:calc(100vh - 53px)}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto}
-.label{font-size:11px;font-weight:700;color:var(--faint);letter-spacing:.04em;margin:4px 0 8px}
-.board{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;cursor:pointer;font-size:13px}
-.board.on{border-color:var(--blue);background:var(--blue-dim);color:var(--blue-bright);font-weight:600}
-.board.lock{color:#666;cursor:not-allowed;background:#161616}
-.board small{margin-left:auto;font-size:11px;color:var(--faint)}
-.proj{padding:8px 10px;border-radius:7px;cursor:pointer;display:flex;justify-content:space-between;gap:8px;font-size:13px}
-.proj:hover{background:var(--bg3)}
-.proj.on{background:var(--blue);color:#fff}
-.proj span{font-size:11px;opacity:.7;white-space:nowrap}
-.sync{font-size:11px;color:var(--faint);margin-top:14px;line-height:1.7;border-top:1px solid var(--border);padding-top:10px}
-.btn{padding:6px 12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit}
-.btn-primary{background:var(--blue);border-color:var(--blue)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic',sans-serif;background:#F5F6FA;color:#1A1D27;font-size:14px}
+#app{display:flex;height:100vh;overflow:hidden}
+
+/* ── 포털 공통 사이드바 ── */
+#sidebar{width:220px;background:#1A1D27;display:flex;flex-direction:column;flex-shrink:0}
+#logo{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,0.07);cursor:pointer}
+#logo:hover{background:rgba(255,255,255,0.04)}
+.logo-back{font-size:11px;color:#6C63FF;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.logo-mark{display:flex;align-items:center;gap:9px}
+.logo-icon{width:28px;height:28px;background:#6C63FF;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-icon svg{width:15px;height:15px}
+.logo-text{font-size:13px;font-weight:600;color:#fff}
+.logo-sub{font-size:10px;color:rgba(255,255,255,0.3);margin-top:1px}
+.nav-wrap{padding:12px 8px;flex:1;overflow-y:auto}
+.nav-label{font-size:9px;font-weight:600;color:rgba(255,255,255,0.3);letter-spacing:.08em;text-transform:uppercase;padding:0 8px;margin:14px 0 5px}
+.nav-label:first-child{margin-top:0}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;color:rgba(255,255,255,0.45);font-size:13px;margin-bottom:2px;cursor:pointer;user-select:none}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.nav-item:hover{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.9)}
+.nav-item.active{background:rgba(255,255,255,0.1);color:#fff;font-weight:500}
+.nav-item.active svg{color:#6C63FF}
+.nav-item.lock{cursor:not-allowed;opacity:.45}
+.nav-item.lock:hover{background:none;color:rgba(255,255,255,0.45)}
+.nav-item small{margin-left:auto;font-size:10px;color:rgba(255,255,255,0.35);font-weight:400}
+.recent a{display:block;padding:6px 10px;border-radius:6px;color:rgba(255,255,255,0.5);font-size:11.5px;line-height:1.45;text-decoration:none}
+.recent a:hover{background:rgba(255,255,255,0.06);color:#fff}
+.recent a b{display:block;font-weight:400;font-size:10px;color:rgba(255,255,255,0.3)}
+.recent .loading,.recent .empty{color:rgba(255,255,255,0.3);font-size:11px;padding:8px 10px;text-align:left}
+.sync{margin:6px 12px 0;padding:10px;border-radius:8px;background:rgba(255,255,255,0.04);font-size:10.5px;color:rgba(255,255,255,0.4);line-height:1.6}
+.sync .err{color:#fca5a5;margin-top:3px}
+.sync .row{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+.sbtn{padding:5px 9px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:rgba(255,255,255,0.75);border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit}
+.sbtn:hover{background:rgba(255,255,255,0.08);color:#fff}
+.sbtn:disabled{opacity:.5;cursor:default}
+#sidebar-footer{padding:12px;border-top:1px solid rgba(255,255,255,0.06)}
+.user-chip{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px}
+.user-av{width:26px;height:26px;border-radius:50%;background:#6C63FF;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.u-name{font-size:12px;color:#fff;font-weight:500}
+.u-role{font-size:10px;color:rgba(255,255,255,0.3);margin-top:1px}
+
+/* ── 메인 ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+#topbar{height:52px;background:#fff;border-bottom:1px solid #E8EAF0;display:flex;align-items:center;padding:0 24px;gap:12px;flex-shrink:0}
+#topbar h1{font-size:16px;font-weight:600}
+.scope{margin-left:auto;font-size:11.5px;color:#2563EB;background:#EFF6FF;border:1px solid #DBEAFE;border-radius:20px;padding:5px 12px}
+#content{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;padding:18px 22px;overflow:hidden}
+.panel{background:#fff;border:1px solid #E8EAF0;border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.panel-head{padding:14px 18px;border-bottom:1px solid #F0F1F5;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.panel-body{flex:1;overflow-y:auto;padding:16px 18px}
+.tab{padding:7px 13px;border-radius:7px;font-size:13px;cursor:pointer;color:#6B7080;border:1px solid transparent}
+.tab:hover{background:#F5F6FA}
+.tab.on{background:#EFF6FF;color:#2563EB;border-color:#DBEAFE;font-weight:600}
+.ptitle{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px}
+.ptitle .dot{width:7px;height:7px;border-radius:50%;background:#22c55e}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid #E0E2EA;border-radius:8px;background:#fff;color:#333;font-size:12.5px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.btn:hover{background:#F5F6FA}
+.btn-primary{background:#2563EB;border-color:#2563EB;color:#fff;font-weight:500}
+.btn-primary:hover{background:#1d4ed8}
 .btn:disabled{opacity:.5;cursor:default}
-.scope{font-size:12px;background:var(--blue-dim);color:#93c5fd;border:1px solid #1e3a5f;border-radius:7px;padding:8px 10px;margin-bottom:14px}
-h2{font-size:16px;margin-bottom:4px}
-.sub{font-size:12px;color:var(--faint);margin-bottom:14px}
-.sec{margin-bottom:18px}
-.sec h3{font-size:13px;margin-bottom:8px;color:var(--muted)}
-.item{padding:8px 10px;border-radius:6px;background:var(--bg3);margin-bottom:6px;line-height:1.55;font-size:13px}
-.src{font-size:11px;color:var(--blue-bright);margin-left:6px;text-decoration:underline;cursor:pointer;white-space:nowrap}
-.badge{font-size:11px;padding:2px 7px;border-radius:10px;white-space:nowrap;margin-right:6px}
-.b-done{background:#052e16;color:var(--green)}.b-wait{background:#422006;color:var(--amber)}.b-late{background:#450a0a;color:var(--red)}.b-chk{background:var(--bg);color:var(--faint);border:1px solid var(--border)}
-.timeline{border-left:2px solid var(--border);padding-left:12px}
-.timeline div{margin-bottom:10px;font-size:13px;line-height:1.5}
-.timeline b{font-size:12px;color:var(--faint);display:block}
-.agenda .item{background:#2a2410;border:1px solid #4a3d12}
-.chat{display:flex;flex-direction:column;padding:0}
-.chat .head{padding:12px 14px;border-bottom:1px solid var(--border);font-weight:700;font-size:13px}
-.msgs{flex:1;overflow:auto;padding:14px}
-.m{margin-bottom:12px;max-width:94%;line-height:1.55;font-size:13px;white-space:pre-wrap}
-.m.me{margin-left:auto;background:var(--blue);padding:8px 12px;border-radius:12px 12px 2px 12px}
-.m.ai{background:var(--bg3);padding:9px 12px;border-radius:12px 12px 12px 2px}
-.m .ref{margin-top:8px;font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px}
-.m .ref a{color:var(--blue-bright)}
-.input{border-top:1px solid var(--border);padding:10px;display:flex;gap:8px}
-.input input{flex:1;padding:9px 11px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit}
-.empty{color:var(--faint);font-size:13px;padding:30px 10px;text-align:center;line-height:1.7}
-.loading{color:var(--faint);font-size:13px;padding:20px 0}
-.postlist a{display:block;color:var(--muted);font-size:12px;padding:5px 0;text-decoration:none;border-bottom:1px solid #262626}
-.postlist a:hover{color:var(--blue-bright)}
-.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px}
-.tab{padding:7px 14px;border-radius:7px;font-size:13px;cursor:pointer;color:var(--muted);border:1px solid transparent}
-.tab.on{background:var(--blue-dim);color:var(--blue-bright);border-color:#1e3a5f;font-weight:600}
-.sbox{display:flex;gap:8px;margin-bottom:10px}
-.sbox input{flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:14px;font-family:inherit}
-.res{display:block;padding:11px 12px;border-radius:8px;background:var(--bg3);margin-bottom:8px;text-decoration:none;color:var(--text);border:1px solid transparent}
-.res:hover{border-color:var(--blue)}
+.sbox{display:flex;gap:8px;margin-bottom:12px}
+input.txt{flex:1;padding:9px 12px;border:1px solid #E0E2EA;border-radius:8px;background:#fff;color:#1A1D27;font-size:13px;font-family:inherit}
+input.txt:focus{outline:none;border-color:#2563EB;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.empty{color:#9EA5B8;font-size:13px;padding:36px 10px;text-align:center;line-height:1.75}
+.loading{color:#9EA5B8;font-size:13px;padding:20px 0}
+.sub{font-size:12px;color:#9EA5B8;margin-bottom:12px}
+.res{display:block;padding:12px 14px;border-radius:8px;background:#fff;border:1px solid #E8EAF0;margin-bottom:8px;text-decoration:none;color:#1A1D27}
+.res:hover{border-color:#2563EB;box-shadow:0 2px 8px rgba(37,99,235,.08)}
 .res .rt{font-size:13px;font-weight:600;margin-bottom:3px}
-.res .rd{font-size:11px;color:var(--faint);margin-bottom:6px}
-.res .rs{font-size:12px;color:var(--muted);line-height:1.6}
-.res mark{background:#854d0e;color:#fff;border-radius:2px;padding:0 1px}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;padding:10px 16px;border-radius:8px;font-size:13px;display:none;z-index:9}
+.res .rd{font-size:11px;color:#9EA5B8;margin-bottom:6px}
+.res .rs{font-size:12px;color:#6B7080;line-height:1.6}
+.res mark{background:#FEF3C7;color:#92400E;border-radius:2px;padding:0 1px}
+/* 최근 회의 정리 */
+h2{font-size:15px;margin-bottom:3px}
+.sec{margin-bottom:18px}
+.sec h3{font-size:12px;margin-bottom:8px;color:#6B7080;font-weight:600}
+.item{padding:9px 12px;border-radius:7px;background:#F7F8FB;border:1px solid #F0F1F5;margin-bottom:6px;line-height:1.55;font-size:13px}
+.src{font-size:11px;color:#2563EB;margin-left:6px;text-decoration:none;white-space:nowrap}
+.src:hover{text-decoration:underline}
+.timeline{border-left:2px solid #E8EAF0;padding-left:12px}
+.timeline div{margin-bottom:10px;font-size:13px;line-height:1.5}
+.timeline b{font-size:11.5px;color:#9EA5B8;display:block;font-weight:600}
+.agenda .item{background:#FFFBEB;border-color:#FDE68A}
+.badge{font-size:11px;padding:2px 8px;border-radius:10px;white-space:nowrap;font-weight:500}
+.b-done{background:#DCFCE7;color:#15803d}.b-wait{background:#FEF3C7;color:#92400E}.b-late{background:#FEE2E2;color:#DC2626}.b-chk{background:#F3F4F6;color:#6B7080}
+
+/* ── AI 에이전트 대화 ── */
+.msgs{flex:1;overflow-y:auto;padding:16px 18px;background:#FAFBFD}
+.m{margin-bottom:12px;line-height:1.6;font-size:13px}
+.m.me{margin-left:auto;width:fit-content;max-width:88%;background:#2563EB;color:#fff;padding:8px 13px;border-radius:12px 12px 2px 12px;white-space:pre-wrap}
+.m.ai{background:#fff;border:1px solid #E8EAF0;padding:14px;border-radius:12px 12px 12px 2px;max-width:100%}
+.m.pending{color:#9EA5B8;padding:10px 14px}
+.lead{background:#EFF6FF;border:1px solid #DBEAFE;border-left:3px solid #2563EB;border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.lead:last-child{margin-bottom:0}
+.lead .k{font-size:11px;font-weight:700;color:#2563EB;margin-bottom:2px}
+.lead .v{font-size:14px;font-weight:600;line-height:1.55;color:#1A1D27}
+.lead.nf{background:#FFFBEB;border-color:#FDE68A;border-left-color:#F59E0B}
+.lead.nf .k{color:#B45309}
+.lead.nf .v{font-weight:500}
+.blk{margin-bottom:13px}
+.blk h4{font-size:12px;font-weight:700;color:#6B7080;margin-bottom:7px}
+.blk h4 span{font-weight:400;color:#9EA5B8;margin-left:4px}
+.tl{position:relative;padding-left:16px}
+.tl:before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:2px;background:#E8EAF0}
+.tl .t{position:relative;margin-bottom:9px}
+.tl .t:before{content:"";position:absolute;left:-16px;top:5px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid #C5CAD8}
+.tl .t.last:before{border-color:#2563EB;background:#2563EB}
+.tl .d{font-size:11px;color:#9EA5B8;font-weight:600}
+.row{display:flex;gap:8px;align-items:flex-start;padding:7px 10px;background:#F7F8FB;border-radius:6px;margin-bottom:5px}
+.row .ic{flex:none;width:14px;text-align:center;color:#9EA5B8}
+.row .tx{flex:1}
+.row .dt{flex:none;font-size:11px;color:#9EA5B8;padding-top:1px}
+.todo{display:grid;grid-template-columns:auto 80px 1fr auto;gap:8px;align-items:center;padding:7px 10px;background:#F7F8FB;border-radius:6px;margin-bottom:5px}
+.todo .who{font-weight:600;font-size:12px}
+.todo .due{font-size:11px;color:#9EA5B8;white-space:nowrap}
+.today{background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:12px;margin-bottom:13px}
+.today h4{color:#B45309;font-size:13px;margin-bottom:9px}
+.tp{background:#fff;border:1px solid #FDE68A;border-radius:8px;padding:10px 12px;margin-bottom:7px}
+.tp:last-child{margin-bottom:0}
+.tp .tt{font-weight:700;font-size:13px;margin-bottom:3px}
+.tp .tt b{color:#D97706;margin-right:5px}
+.tp .why{font-size:12px;color:#6B7080}
+.tp .ask{margin-top:6px;font-size:12px;color:#92400E;background:#FEF3C7;border-radius:6px;padding:5px 9px}
+.refs{display:flex;flex-wrap:wrap;gap:6px;padding-top:10px;margin-top:2px;border-top:1px solid #F0F1F5}
+.refs span{font-size:11px;color:#9EA5B8;align-self:center}
+.chip{font-size:11px;color:#2563EB;background:#fff;border:1px solid #DBEAFE;border-radius:14px;padding:3px 10px;text-decoration:none}
+.chip:hover{background:#EFF6FF}
+.follow{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 14px}
+.follow button{font-family:inherit;font-size:12px;color:#6B7080;background:#fff;border:1px solid #E0E2EA;border-radius:14px;padding:5px 11px;cursor:pointer}
+.follow button:hover{border-color:#2563EB;color:#2563EB}
+.input{border-top:1px solid #F0F1F5;padding:12px;display:flex;gap:8px;background:#fff}
+#toast{position:fixed;bottom:24px;right:24px;background:#1A1D27;color:#fff;border-radius:8px;padding:12px 18px;font-size:13px;display:none;z-index:200;max-width:340px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 </style>
 </head>
 <body>
-<header>
-  <a href="../">← 포털</a>
-  <h1>🤖 회의AI에이전트</h1>
-  <span class="who" id="who">확인 중...</span>
-</header>
-<div class="wrap">
-  <div class="card">
-    <div class="label">① 회의 게시판</div>
-    <div id="boards"></div>
-    <div class="label" style="margin-top:16px">최근 회의록</div>
-    <div id="projects" class="postlist"><div class="loading">불러오는 중...</div></div>
-    <div class="sync" id="sync"></div>
-  </div>
-
-  <div class="card">
-    <div class="tabs"><div class="tab on" id="tab-search" onclick="showTab('search')">🔍 회의록 검색</div><div class="tab" id="tab-brief" onclick="showTab('brief')">📋 최근 회의 정리 (AI)</div></div>
-    <div id="pane-search">
-      <div class="sbox"><input id="sq" placeholder="키워드 입력 후 Enter (여러 단어는 띄어쓰기 — 모두 포함된 회의록)" onkeydown="if(event.key==='Enter')doSearch()"><button class="btn btn-primary" onclick="doSearch()">검색</button></div>
-      <div id="sres"><div class="empty">선택한 게시판의 회의록 제목·본문에서 찾아요.<br>예: 샤브20 예산 / 경품 / 시상식</div></div>
+<div id="app">
+  <div id="sidebar">
+    <div id="logo" onclick="location.href='../'">
+      <div class="logo-back"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="12" height="12"><path d="M10 12L6 8l4-4"/></svg>포털 홈으로</div>
+      <div class="logo-mark">
+        <div class="logo-icon"><svg viewBox="0 0 20 20" fill="none" stroke="#fff" stroke-width="1.5"><rect x="3" y="3.5" width="14" height="10" rx="1.5"/><path d="M7 17h6M10 13.5V17M6.5 7.5h7M6.5 10h4"/></svg></div>
+        <div><div class="logo-text">회의AI에이전트</div><div class="logo-sub">인사이더그램 컴퍼니</div></div>
+      </div>
     </div>
-    <div id="brief" style="display:none"></div>
+    <div class="nav-wrap">
+      <div class="nav-label">회의 게시판</div>
+      <div id="boards"></div>
+      <div class="nav-label">최근 회의록</div>
+      <div id="projects" class="recent"><div class="loading">불러오는 중...</div></div>
+    </div>
+    <div id="sync"></div>
+    <div id="sidebar-footer">
+      <div class="user-chip"><div class="user-av" id="s-avatar">?</div><div><div class="u-name" id="s-name">-</div><div class="u-role" id="s-role">-</div></div></div>
+    </div>
   </div>
 
-  <div class="card chat">
-    <div class="head">🤖 회의 AI에이전트</div>
-    <div class="msgs" id="msgs"><div class="empty">게시판 전체 회의록에서 찾아 답해요.<br>예: "샤브20 11월 이벤트 예산 얼마로 정했지?"</div></div>
-    <div class="input"><input id="q" placeholder="질문 입력 후 Enter" onkeydown="if(event.key==='Enter')ask()"><button class="btn btn-primary" onclick="ask()">전송</button></div>
+  <div id="main">
+    <div id="topbar">
+      <h1>회의AI에이전트</h1>
+      <div class="scope" id="scope">🔐 확인 중...</div>
+    </div>
+    <div id="content">
+      <div class="panel">
+        <div class="panel-head"><div class="tab on" id="tab-search" onclick="showTab('search')">🔍 회의록 검색</div><div class="tab" id="tab-brief" onclick="showTab('brief')">📋 최근 회의 정리 (AI)</div></div>
+        <div class="panel-body">
+          <div id="pane-search">
+            <div class="sbox"><input class="txt" id="sq" placeholder="키워드 입력 후 Enter (여러 단어는 띄어쓰기 — 모두 포함된 회의록)" onkeydown="if(event.key==='Enter')doSearch()"><button class="btn btn-primary" onclick="doSearch()">검색</button></div>
+            <div id="sres"><div class="empty">선택한 게시판의 회의록 제목·본문에서 찾아요.<br>예: 샤브20 예산 / 경품 / 시상식</div></div>
+          </div>
+          <div id="brief" style="display:none"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="ptitle"><span class="dot"></span>🤖 AI 에이전트에게 물어보기</div></div>
+        <div class="msgs" id="msgs"><div class="empty">게시판 전체 회의록에서 찾아 답해요.<br>예: "지난번 커뮤니케이션팀 회의 정리해줘" · "11월 목표 매출 얼마였지?"<br><span style="font-size:11.5px">회의록에 없는 내용은 없다고 답해요.</span></div></div>
+        <div class="input"><input class="txt" id="q" placeholder="질문 입력 후 Enter" onkeydown="if(event.key==='Enter'&&!event.isComposing)ask()"><button class="btn btn-primary" id="askbtn" onclick="ask()">전송</button></div>
+      </div>
+    </div>
   </div>
 </div>
 <div id="toast"></div>
@@ -107,21 +195,28 @@ const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 const BOARDS={all:'전체회의록&미팅록',comm:'커뮤니케이션팀 회의록'};
-let me=null, canComm=false, board='all', posts=[], refMap={};
+const BOARD_ICON={all:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="2" width="10" height="12" rx="1.2"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3"/></svg>',comm:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>',lock:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3.5" y="7" width="9" height="7" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/></svg>'};
+// 네이버웍스 연결(OAuth)은 대표 계정만 (서버에서도 동일하게 제한)
+const NW_OWNER=['635bb7fa-12be-4409-a92f-507af5f74d32','6fe5822b-7834-4a9f-a4db-f8144ebe6aeb'];
+let me=null, myId=null, canComm=false, board='all', posts=[], refMap={};
 
 function esc(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2600);}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2800);}
 async function authHeaders(){const s=(await sb.auth.getSession()).data.session;return {'Content-Type':'application/json','Authorization':'Bearer '+(s?s.access_token:'')};}
 function safeUrl(u){return /^https:\/\//.test(u||'')?u:'#';}
+function md(d){const m=String(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${m[2]}.${m[3]}`:esc(d||'');}
 
 async function init(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session||!(sessionStorage.getItem('portal_logged_in')||document.cookie.split('; ').includes('ig_portal=1'))){try{localStorage.setItem('portal_return_to',location.href);}catch(e){} location.href='../';return;}
-  if(!['635bb7fa-12be-4409-a92f-507af5f74d32','6fe5822b-7834-4a9f-a4db-f8144ebe6aeb'].includes(session.user.id)){alert('회의AI에이전트는 준비 중이에요.');location.href='../';return;}
+  myId=session.user.id;
   const {data:role}=await sb.from('user_roles').select('*').eq('user_id',session.user.id).single();
   me=role||{};
   canComm=me.role==='admin'||me.department==='관리자'||me.department==='커뮤니케이션팀';
-  document.getElementById('who').textContent=`${me.name||session.user.email} · 볼 수 있는 회의록 ${canComm?2:1}개`;
+  const nm=me.name||session.user.email;
+  document.getElementById('s-name').textContent=nm;
+  document.getElementById('s-avatar').textContent=(nm||'?').slice(0,1);
+  document.getElementById('s-role').textContent=[me.department,me.position].filter(Boolean).join(' · ')||(me.role==='admin'?'관리자':'직원');
   renderBoards();
   await loadPosts();
   if(me.role==='admin') loadSyncState();
@@ -130,15 +225,16 @@ async function init(){
 function renderBoards(){
   document.getElementById('boards').innerHTML=Object.entries(BOARDS).map(([k,name])=>{
     const locked=k==='comm'&&!canComm;
-    return `<div class="board ${board===k?'on':''} ${locked?'lock':''}" ${locked?'title="관리자·커뮤니케이션팀만 볼 수 있어요"':`onclick="selectBoard('${k}')"`}>${locked?'🔒':k==='all'?'📋':'💬'} ${esc(name)}<small id="cnt-${k}">${locked?'권한 없음':''}</small></div>`;
+    return `<div class="nav-item ${board===k?'active':''} ${locked?'lock':''}" ${locked?'title="관리자·커뮤니케이션팀만 볼 수 있어요"':`onclick="selectBoard('${k}')"`}>${locked?BOARD_ICON.lock:BOARD_ICON[k]}${esc(name)}<small id="cnt-${k}">${locked?'권한 없음':''}</small></div>`;
   }).join('');
+  document.getElementById('scope').textContent=`🔐 ${BOARDS[board]} 회의록만 사용 · 다른 게시판 내용은 쓰지 않아요`;
 }
 
 async function selectBoard(k){
   if(k==='comm'&&!canComm)return;
   if(k===board)return;
   board=k;renderBoards();
-  document.getElementById('msgs').innerHTML=`<div class="empty">${esc(BOARDS[board])} 전체 회의록에서 찾아 답해요.</div>`;
+  document.getElementById('msgs').innerHTML=`<div class="empty">${esc(BOARDS[board])} 전체 회의록에서 찾아 답해요.<br><span style="font-size:11.5px">회의록에 없는 내용은 없다고 답해요.</span></div>`;
   await loadPosts();
   briefBoard=null;
   if(curTab==='brief') loadBrief();
@@ -185,7 +281,7 @@ async function doSearch(){
   res.sort((x,y)=>y.cnt-x.cnt||(y.p.created_time||'').localeCompare(x.p.created_time||''));
   const hl=t=>{let h=esc(t);keys.forEach(k=>{const e=esc(k).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');h=h.replace(new RegExp(e,'gi'),m=>`<mark>${m}</mark>`);});return h;};
   box.innerHTML=`<div class="sub">"${esc(q)}" — ${esc(BOARDS[b])}에서 ${res.length}건</div>`+
-    (res.length?res.map(r=>`<a class="res" href="${esc(safeUrl(r.p.url))}" target="_blank" rel="noopener"><div class="rt">${hl(r.p.title)}</div><div class="rd">${esc((r.p.created_time||'').slice(0,10))}${r.p.author?' · '+esc(r.p.author):''} · 일치 ${r.cnt}곳 · 원문 열기 ↗</div><div class="rs">${hl(r.snip)}</div></a>`).join(''):'<div class="empty">찾는 회의록이 없어요.<br>다른 단어로 찾아보거나 오른쪽 AI에이전트에게 물어보세요.</div>');
+    (res.length?res.map(r=>`<a class="res" href="${esc(safeUrl(r.p.url))}" target="_blank" rel="noopener"><div class="rt">${hl(r.p.title)}</div><div class="rd">${esc((r.p.created_time||'').slice(0,10))}${r.p.author?' · '+esc(r.p.author):''} · 일치 ${r.cnt}곳 · 원문 열기 ↗</div><div class="rs">${hl(r.snip)}</div></a>`).join(''):'<div class="empty">찾는 회의록이 없어요.<br>다른 단어로 찾아보거나 오른쪽 AI 에이전트에게 물어보세요.</div>');
 }
 
 async function loadPosts(){
@@ -195,59 +291,91 @@ async function loadPosts(){
   posts=data||[];
   refMap={};posts.forEach(p=>refMap[p.id]=p);
   const c=document.getElementById('cnt-'+board); if(c)c.textContent=posts.length+'건';
-  document.getElementById('projects').innerHTML=posts.length?posts.map(p=>`<a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">${esc((p.created_time||'').slice(0,10))} · ${esc(p.title)}</a>`).join(''):'<div class="empty">아직 가져온 회의록이 없어요.<br>네이버웍스에 올리면 자동으로 채워집니다.</div>';
+  document.getElementById('projects').innerHTML=posts.length?posts.slice(0,30).map(p=>`<a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener"><b>${esc((p.created_time||'').slice(0,10))}</b>${esc(p.title)}</a>`).join(''):'<div class="empty">아직 가져온 회의록이 없어요.</div>';
 }
 
 let briefSeq=0;
 async function loadBrief(){
   const seq=++briefSeq, b=board; briefBoard=b;
-  document.getElementById('brief').innerHTML=`<div class="scope">🔐 검색 범위: <b>${esc(BOARDS[b])}</b> 게시판 전체 · 다른 게시판 내용은 사용하지 않습니다</div><h2>최근 회의 정리</h2><div class="loading">⏳ AI가 최근 회의록을 정리하는 중... (20초쯤 걸려요)</div>`;
+  document.getElementById('brief').innerHTML=`<h2>최근 회의 정리</h2><div class="loading">⏳ AI가 최근 회의록을 정리하는 중... (20초쯤 걸려요)</div>`;
   if(!posts.length){document.getElementById('brief').querySelector('.loading').textContent='아직 회의록이 없어요.';return;}
   try{
     const res=await fetch('/.netlify/functions/meeting-agent',{method:'POST',headers:await authHeaders(),body:JSON.stringify({action:'brief',board:b})});
     const r=await res.json();
     if(!res.ok)throw new Error(r.error||res.status);
     if(seq!==briefSeq)return;
-    if(!res.ok)briefBoard=null;
     renderBrief(r.brief||{});
   }catch(e){if(seq===briefSeq){briefBoard=null;const l=document.getElementById('brief').querySelector('.loading');if(l)l.textContent='정리 실패: '+e.message;}}
 }
 
-function refLink(id){const p=refMap[id];if(!p)return '';return `<a class="src" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">${esc((p.created_time||'').slice(5,10))} 회의록 ↗</a>`;}
+function refLink(id){const p=refMap[id];if(!p)return '';return `<a class="src" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">${esc((p.created_time||'').slice(5,10).replace('-','.'))} 회의록 ↗</a>`;}
 function statusBadge(s){const m={'완료':'b-done','진행중':'b-wait','기한지남':'b-late'};return `<span class="badge ${m[s]||'b-chk'}">${esc(s||'확인필요')}</span>`;}
 
 function renderBrief(b){
   const sec=(title,arr,fn,cls='')=>arr&&arr.length?`<div class="sec ${cls}"><h3>${title}</h3>${arr.map(fn).join('')}</div>`:'';
   document.getElementById('brief').innerHTML=`
-    <div class="scope">🔐 검색 범위: <b>${esc(BOARDS[board])}</b> 게시판 전체 · 다른 게시판 내용은 사용하지 않습니다</div>
-    <h2>최근 회의 정리</h2><div class="sub">최근 회의 ${Math.min(posts.length,10)}건 기준 · 궁금한 건 오른쪽 AI에이전트에게 물어보세요 (전체 ${posts.length}건에서 찾아요)</div>
+    <h2>최근 회의 정리</h2><div class="sub">최근 회의 ${Math.min(posts.length,10)}건 기준 · 궁금한 건 오른쪽 AI 에이전트에게 물어보세요 (전체 ${posts.length}건에서 찾아요)</div>
     ${b.flow&&b.flow.length?`<div class="sec"><h3>🕒 최근 회의 흐름</h3><div class="timeline">${b.flow.map(f=>`<div><b>${esc(f.date)} ${esc(f.title)}</b>${esc(f.point)} ${refLink(f.ref)}</div>`).join('')}</div></div>`:''}
     ${sec('⏸ 아직 정하지 못한 것',b.open_issues,d=>`<div class="item">${esc(d.text)} ${refLink(d.ref)}</div>`)}
-    ${sec('👤 담당자별 할 일 점검',b.action_items,a=>`<div class="item">${statusBadge(a.status)}<b>${esc(a.owner||'담당 미정')}</b> — ${esc(a.task)}${a.due?` <span style="color:var(--faint)">(${esc(a.due)})</span>`:''} ${refLink(a.ref)}</div>`)}
+    ${sec('👤 담당자별 할 일 점검',b.action_items,a=>`<div class="item">${statusBadge(a.status)} <b>${esc(a.owner||'담당 미정')}</b> — ${esc(a.task)}${a.due?` <span style="color:#9EA5B8">(${esc(a.due)})</span>`:''} ${refLink(a.ref)}</div>`)}
     ${sec('📌 오늘 안건 제안',b.agenda,(a,i)=>`<div class="item">${i+1}. ${esc(a)}</div>`,'agenda')}`;
 }
 
-async function ask(){
-  const q=document.getElementById('q').value.trim();if(!q)return;
+// ── AI 에이전트 답변 렌더링 ──
+function renderAnswer(a,refs){
+  const R=r=>refs[r];
+  const src=r=>{const p=R(r);return p?` <a class="src" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">원문 ↗</a>`:'';};
+  const blk=(title,arr,fn,extra='')=>arr&&arr.length?`<div class="blk"><h4>${title}${extra?`<span>${extra}</span>`:''}</h4>${arr.map(fn).join('')}</div>`:'';
+  let h='';
+  if(a.mode==='not_found'){
+    h+=`<div class="lead nf"><div class="k">찾지 못했어요</div><div class="v">${esc(a.lead)}${a.related?`<br><span style="font-size:13px;color:#6B7080">참고: ${esc(a.related)}</span>`:''}</div></div>`;
+  }else{
+    h+=`<div class="lead"><div class="k">${a.mode==='summary'?'한 줄 요약':'답변'}</div><div class="v">${esc(a.lead)}</div></div>`;
+  }
+  if(a.context&&a.context.length) h+=`<div class="blk">${a.context.map(c=>`<div class="row"><span class="ic">↳</span><span class="tx">${esc(c.text)}${src(c.ref)}</span><span class="dt">${esc(c.date||'')}</span></div>`).join('')}</div>`;
+  if(a.flow&&a.flow.length) h+=`<div class="blk"><h4>🕒 회의 흐름<span>· 회의록 ${new Set(a.flow.map(f=>f.ref)).size}건</span></h4><div class="tl">${a.flow.map((f,i)=>`<div class="t ${i===a.flow.length-1?'last':''}"><div class="d">${md(f.date)}${i===a.flow.length-1?' · 최근':''}${src(f.ref)}</div>${esc(f.point)}</div>`).join('')}</div></div>`;
+  h+=blk('✅ 결정된 것',a.decisions,d=>`<div class="row"><span class="ic">•</span><span class="tx">${esc(d.text)}${src(d.ref)}</span><span class="dt">${esc(d.date||'')}</span></div>`);
+  h+=blk('👤 할 일 점검',a.action_items,t=>`<div class="todo">${statusBadge(t.status)}<span class="who">${esc(t.owner||'담당 미정')}</span><span>${esc(t.task)}${src(t.ref)}</span><span class="due">${t.due&&t.due!=='null'?esc(t.due):'—'}</span></div>`,'· 오늘 기준');
+  h+=blk('⏸ 아직 안 정해진 것',a.open_issues,d=>`<div class="row"><span class="ic">?</span><span class="tx">${esc(d.text)}${src(d.ref)}</span></div>`);
+  if(a.today_points&&a.today_points.length) h+=`<div class="today"><h4>💡 오늘 회의에서 이렇게 논의해 보세요</h4>${a.today_points.map((t,i)=>`<div class="tp"><div class="tt"><b>${i+1}</b>${esc(t.title)}</div><div class="why">${esc(t.why)}${src(t.ref)}</div>${t.ask?`<div class="ask">💬 "${esc(String(t.ask).replace(/^["“]|["”]$/g,''))}"</div>`:''}</div>`).join('')}</div>`;
+  const rk=Object.keys(refs||{});
+  if(rk.length) h+=`<div class="refs"><span>📄 ${a.mode==='not_found'?'가장 가까운 회의록':'근거'}</span>${rk.sort((x,y)=>String(refs[x].date).localeCompare(String(refs[y].date))).map(r=>`<a class="chip" href="${esc(safeUrl(refs[r].url))}" target="_blank" rel="noopener" title="${esc(refs[r].title)}">${md(refs[r].date)} ${esc(String(refs[r].title||'').slice(0,28))} ↗</a>`).join('')}</div>`;
+  return h;
+}
+
+let asking=false;
+async function ask(preset){
+  if(asking)return;
+  const qi=document.getElementById('q');
+  const q=(preset||qi.value).trim();if(!q)return;
+  asking=true;document.getElementById('askbtn').disabled=true;
   const box=document.getElementById('msgs');
   const e0=box.querySelector('.empty');if(e0)e0.remove();
-  box.insertAdjacentHTML('beforeend',`<div class="m me">${esc(q)}</div><div class="m ai" id="pending">⏳ 회의록 찾는 중...</div>`);
-  document.getElementById('q').value='';box.scrollTop=box.scrollHeight;
+  box.querySelectorAll('.follow').forEach(f=>f.remove());
+  box.insertAdjacentHTML('beforeend',`<div class="m me">${esc(q)}</div><div class="m ai pending" id="pending">⏳ 회의록 찾는 중... (10~20초)</div>`);
+  qi.value='';box.scrollTop=box.scrollHeight;
   try{
     const res=await fetch('/.netlify/functions/meeting-agent',{method:'POST',headers:await authHeaders(),body:JSON.stringify({action:'ask',board,question:q})});
     const r=await res.json();if(!res.ok)throw new Error(r.error||res.status);
-    const refs=(r.refs||[]).map(p=>`<a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">[${esc(BOARDS[board])}] ${esc(p.date)} ${esc(p.title)} ↗</a>`).join('<br>');
-    document.getElementById('pending').outerHTML=`<div class="m ai">${esc(r.answer||'')}${refs?`<div class="ref">📄 근거<br>${refs}</div>`:''}</div>`;
-  }catch(e){document.getElementById('pending').outerHTML=`<div class="m ai">답변 실패: ${esc(e.message)}</div>`;}
+    if(r.empty){document.getElementById('pending').outerHTML=`<div class="m ai"><div class="lead nf"><div class="k">회의록 없음</div><div class="v">이 게시판에 아직 가져온 회의록이 없어요.</div></div></div>`;}
+    else{
+      const a=r.answer||{};
+      const fu=(a.follow_ups||[]).length?`<div class="follow">${a.follow_ups.map(f=>`<button data-q="${esc(f)}">${esc(f)}</button>`).join('')}</div>`:'';
+      document.getElementById('pending').outerHTML=`<div class="m ai">${renderAnswer(a,r.refs||{})}</div>${fu}`;
+    }
+  }catch(e){document.getElementById('pending').outerHTML=`<div class="m ai"><div class="lead nf"><div class="k">답변 실패</div><div class="v">${esc(e.message)}</div></div></div>`;}
+  asking=false;document.getElementById('askbtn').disabled=false;
   box.scrollTop=box.scrollHeight;
 }
+document.getElementById('msgs').addEventListener('click',e=>{const b=e.target.closest('.follow button');if(b)ask(b.dataset.q);});
 
 async function loadSyncState(){
   const {data}=await sb.from('meeting_sync_state').select('*').eq('key','last_run').maybeSingle();
   const v=data&&data.value;
-  const when=v?new Date(v.at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'아직 없음';
-  const err=v&&v.errors&&v.errors.length?`<div style="color:var(--red);margin-top:4px">⚠️ ${esc(v.errors[0])}</div>`:'';
-  document.getElementById('sync').innerHTML=`🔄 네이버웍스 자동 동기화 (15분마다)<br>마지막: ${esc(when)}${v?` · 분석 대기 ${esc(v.pendingAnalysis??'-')}건`:''}${err}<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn" id="syncbtn" onclick="syncNow()">지금 동기화</button><button class="btn" onclick="connectNW()">네이버웍스 연결</button></div><div style="font-size:10px;margin-top:4px">관리자 전용 · 연결은 처음 한 번만</div>`;
+  const when=v?new Date(v.at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'아직 없음';
+  const err=v&&v.errors&&v.errors.length?`<div class="err">⚠️ ${esc(v.errors[0])}</div>`:'';
+  const owner=NW_OWNER.includes(myId);
+  document.getElementById('sync').innerHTML=`<div class="sync">🔄 네이버웍스 자동 동기화 · 15분마다<br>마지막 ${esc(when)}${v?` · 분석 대기 ${esc(v.pendingAnalysis??'-')}건`:''}${err}<div class="row"><button class="sbtn" id="syncbtn" onclick="syncNow()">지금 동기화</button>${owner?'<button class="sbtn" onclick="connectNW()">네이버웍스 연결</button>':''}</div></div>`;
 }
 async function connectNW(){
   try{
