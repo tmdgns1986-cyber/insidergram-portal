@@ -55,6 +55,17 @@ h2{font-size:16px;margin-bottom:4px}
 .loading{color:var(--faint);font-size:13px;padding:20px 0}
 .postlist a{display:block;color:var(--muted);font-size:12px;padding:5px 0;text-decoration:none;border-bottom:1px solid #262626}
 .postlist a:hover{color:var(--blue-bright)}
+.tabs{display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px}
+.tab{padding:7px 14px;border-radius:7px;font-size:13px;cursor:pointer;color:var(--muted);border:1px solid transparent}
+.tab.on{background:var(--blue-dim);color:var(--blue-bright);border-color:#1e3a5f;font-weight:600}
+.sbox{display:flex;gap:8px;margin-bottom:10px}
+.sbox input{flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:14px;font-family:inherit}
+.res{display:block;padding:11px 12px;border-radius:8px;background:var(--bg3);margin-bottom:8px;text-decoration:none;color:var(--text);border:1px solid transparent}
+.res:hover{border-color:var(--blue)}
+.res .rt{font-size:13px;font-weight:600;margin-bottom:3px}
+.res .rd{font-size:11px;color:var(--faint);margin-bottom:6px}
+.res .rs{font-size:12px;color:var(--muted);line-height:1.6}
+.res mark{background:#854d0e;color:#fff;border-radius:2px;padding:0 1px}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;padding:10px 16px;border-radius:8px;font-size:13px;display:none;z-index:9}
 </style>
 </head>
@@ -73,8 +84,13 @@ h2{font-size:16px;margin-bottom:4px}
     <div class="sync" id="sync"></div>
   </div>
 
-  <div class="card" id="brief">
-    <div class="loading">⏳ 최근 회의 정리 중... (20초쯤 걸려요)</div>
+  <div class="card">
+    <div class="tabs"><div class="tab on" id="tab-search" onclick="showTab('search')">🔍 회의록 검색</div><div class="tab" id="tab-brief" onclick="showTab('brief')">📋 최근 회의 정리 (AI)</div></div>
+    <div id="pane-search">
+      <div class="sbox"><input id="sq" placeholder="키워드 입력 후 Enter (여러 단어는 띄어쓰기 — 모두 포함된 회의록)" onkeydown="if(event.key==='Enter')doSearch()"><button class="btn btn-primary" onclick="doSearch()">검색</button></div>
+      <div id="sres"><div class="empty">선택한 게시판의 회의록 제목·본문에서 찾아요.<br>예: 샤브20 예산 / 경품 / 시상식</div></div>
+    </div>
+    <div id="brief" style="display:none"></div>
   </div>
 
   <div class="card chat">
@@ -108,7 +124,6 @@ async function init(){
   document.getElementById('who').textContent=`${me.name||session.user.email} · 볼 수 있는 회의록 ${canComm?2:1}개`;
   renderBoards();
   await loadPosts();
-  loadBrief();
   if(me.role==='admin') loadSyncState();
 }
 
@@ -125,7 +140,52 @@ async function selectBoard(k){
   board=k;renderBoards();
   document.getElementById('msgs').innerHTML=`<div class="empty">${esc(BOARDS[board])} 전체 회의록에서 찾아 답해요.</div>`;
   await loadPosts();
-  loadBrief();
+  briefBoard=null;
+  if(curTab==='brief') loadBrief();
+  if(document.getElementById('sq').value.trim()) doSearch(); else document.getElementById('sres').innerHTML='<div class="empty">선택한 게시판의 회의록 제목·본문에서 찾아요.</div>';
+}
+
+let curTab='search', briefBoard=null, fullCache={};
+function showTab(t){
+  curTab=t;
+  document.getElementById('tab-search').classList.toggle('on',t==='search');
+  document.getElementById('tab-brief').classList.toggle('on',t==='brief');
+  document.getElementById('pane-search').style.display=t==='search'?'':'none';
+  document.getElementById('brief').style.display=t==='brief'?'':'none';
+  if(t==='brief'&&briefBoard!==board) loadBrief();
+}
+
+// 키워드 검색: DB 보안 규칙(RLS)으로 권한 있는 게시판 글만 내려옴. AI 사용 안 함.
+async function doSearch(){
+  const q=document.getElementById('sq').value.trim();
+  const box=document.getElementById('sres');
+  if(!q){box.innerHTML='<div class="empty">키워드를 입력해 주세요.</div>';return;}
+  const b=board;
+  if(!fullCache[b]){
+    box.innerHTML='<div class="loading">⏳ 찾는 중...</div>';
+    const {data,error}=await sb.from('meeting_posts').select('id,title,created_time,url,author,body,analysis').eq('board_key',b).order('created_time',{ascending:false}).limit(1000);
+    if(error){box.innerHTML=`<div class="empty">검색 실패: ${esc(error.message)}</div>`;return;}
+    fullCache[b]=data||[];
+  }
+  if(b!==board)return;
+  const keys=q.toLowerCase().split(/\s+/).filter(Boolean).slice(0,6);
+  const res=[];
+  for(const p of fullCache[b]){
+    const a=p.analysis||{};
+    const title=(p.title||''), text=(p.body||'')+'\n'+(a.summary||'');
+    const lt=title.toLowerCase(), lx=text.toLowerCase();
+    if(!keys.every(k=>lt.includes(k)||lx.includes(k)))continue;
+    let cnt=0; keys.forEach(k=>{cnt+=lt.split(k).length-1; cnt+=lx.split(k).length-1;});
+    const k0=keys.find(k=>lx.includes(k));
+    let snip='';
+    if(k0){const i=lx.indexOf(k0);snip=(i>60?'…':'')+text.slice(Math.max(0,i-60),i+120).replace(/\s+/g,' ')+'…';}
+    else snip=(a.summary||text).slice(0,150);
+    res.push({p,cnt,snip});
+  }
+  res.sort((x,y)=>y.cnt-x.cnt||(y.p.created_time||'').localeCompare(x.p.created_time||''));
+  const hl=t=>{let h=esc(t);keys.forEach(k=>{const e=esc(k).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');h=h.replace(new RegExp(e,'gi'),m=>`<mark>${m}</mark>`);});return h;};
+  box.innerHTML=`<div class="sub">"${esc(q)}" — ${esc(BOARDS[b])}에서 ${res.length}건</div>`+
+    (res.length?res.map(r=>`<a class="res" href="${esc(safeUrl(r.p.url))}" target="_blank" rel="noopener"><div class="rt">${hl(r.p.title)}</div><div class="rd">${esc((r.p.created_time||'').slice(0,10))}${r.p.author?' · '+esc(r.p.author):''} · 일치 ${r.cnt}곳 · 원문 열기 ↗</div><div class="rs">${hl(r.snip)}</div></a>`).join(''):'<div class="empty">찾는 회의록이 없어요.<br>다른 단어로 찾아보거나 오른쪽 AI에게 물어보세요.</div>');
 }
 
 async function loadPosts(){
@@ -140,7 +200,7 @@ async function loadPosts(){
 
 let briefSeq=0;
 async function loadBrief(){
-  const seq=++briefSeq, b=board;
+  const seq=++briefSeq, b=board; briefBoard=b;
   document.getElementById('brief').innerHTML=`<div class="scope">🔐 검색 범위: <b>${esc(BOARDS[b])}</b> 게시판 전체 · 다른 게시판 내용은 사용하지 않습니다</div><h2>최근 회의 정리</h2><div class="loading">⏳ AI가 최근 회의록을 정리하는 중... (20초쯤 걸려요)</div>`;
   if(!posts.length){document.getElementById('brief').querySelector('.loading').textContent='아직 회의록이 없어요.';return;}
   try{
@@ -148,8 +208,9 @@ async function loadBrief(){
     const r=await res.json();
     if(!res.ok)throw new Error(r.error||res.status);
     if(seq!==briefSeq)return;
+    if(!res.ok)briefBoard=null;
     renderBrief(r.brief||{});
-  }catch(e){if(seq===briefSeq){const l=document.getElementById('brief').querySelector('.loading');if(l)l.textContent='정리 실패: '+e.message;}}
+  }catch(e){if(seq===briefSeq){briefBoard=null;const l=document.getElementById('brief').querySelector('.loading');if(l)l.textContent='정리 실패: '+e.message;}}
 }
 
 function refLink(id){const p=refMap[id];if(!p)return '';return `<a class="src" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">${esc((p.created_time||'').slice(5,10))} 회의록 ↗</a>`;}
@@ -202,7 +263,7 @@ async function syncNow(){
     const r=await res.json();if(!res.ok)throw new Error(r.error||res.status);
     toast(`가져온 글 ${r.log.listed}건 · 본문 ${r.log.bodies}건 · 분석 ${r.log.analyzed}건`);
   }catch(e){toast('동기화 실패: '+e.message);}
-  await loadSyncState();await loadPosts();
+  fullCache={};await loadSyncState();await loadPosts();
 }
 
 (function(){const p=new URLSearchParams(location.search).get('nw');if(!p)return;history.replaceState(null,'',location.pathname);setTimeout(()=>toast(p==='ok'?'✅ 네이버웍스 연결 완료! 지금 동기화를 눌러 주세요.':'연결 실패 ('+p+') — 다시 시도해 주세요.'),800);})();
