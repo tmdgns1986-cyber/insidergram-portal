@@ -432,7 +432,6 @@ function closeModal(){document.getElementById('modal-overlay').classList.remove(
 
 async function togglePw(){
   if(!currentAccountId)return;
-  if(!(currentUserRole.can_view_password||currentUserRole.role==='admin')){showToast('비밀번호 열람 권한이 없습니다.');return;}
   if(!pwVisible){
     const {data:pw,error:pwErr}=await sb.rpc('get_account_password',{p_account_id:currentAccountId});
     if(pwErr){showToast('비밀번호 열람 실패: '+pwErr.message);return;}
