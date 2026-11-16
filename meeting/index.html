@@ -13,7 +13,7 @@ header{display:flex;align-items:center;gap:12px;padding:12px 22px;border-bottom:
 header a{color:var(--muted);text-decoration:none;font-size:13px}
 header h1{font-size:16px;font-weight:700}
 header .who{margin-left:auto;font-size:12px;color:var(--faint)}
-.wrap{display:grid;grid-template-columns:260px 1fr 380px;gap:14px;padding:14px 18px;height:calc(100vh - 53px)}
+.wrap{display:grid;grid-template-columns:240px minmax(0,1fr) minmax(0,1.15fr);gap:14px;padding:14px 18px;height:calc(100vh - 53px)}
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto}
 .label{font-size:11px;font-weight:700;color:var(--faint);letter-spacing:.04em;margin:4px 0 8px}
 .board{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:8px;cursor:pointer;font-size:13px}
@@ -94,7 +94,7 @@ h2{font-size:16px;margin-bottom:4px}
   </div>
 
   <div class="card chat">
-    <div class="head">💬 회의 중에 물어보기</div>
+    <div class="head">🤖 회의 AI에이전트</div>
     <div class="msgs" id="msgs"><div class="empty">게시판 전체 회의록에서 찾아 답해요.<br>예: "샤브20 11월 이벤트 예산 얼마로 정했지?"</div></div>
     <div class="input"><input id="q" placeholder="질문 입력 후 Enter" onkeydown="if(event.key==='Enter')ask()"><button class="btn btn-primary" onclick="ask()">전송</button></div>
   </div>
@@ -185,7 +185,7 @@ async function doSearch(){
   res.sort((x,y)=>y.cnt-x.cnt||(y.p.created_time||'').localeCompare(x.p.created_time||''));
   const hl=t=>{let h=esc(t);keys.forEach(k=>{const e=esc(k).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');h=h.replace(new RegExp(e,'gi'),m=>`<mark>${m}</mark>`);});return h;};
   box.innerHTML=`<div class="sub">"${esc(q)}" — ${esc(BOARDS[b])}에서 ${res.length}건</div>`+
-    (res.length?res.map(r=>`<a class="res" href="${esc(safeUrl(r.p.url))}" target="_blank" rel="noopener"><div class="rt">${hl(r.p.title)}</div><div class="rd">${esc((r.p.created_time||'').slice(0,10))}${r.p.author?' · '+esc(r.p.author):''} · 일치 ${r.cnt}곳 · 원문 열기 ↗</div><div class="rs">${hl(r.snip)}</div></a>`).join(''):'<div class="empty">찾는 회의록이 없어요.<br>다른 단어로 찾아보거나 오른쪽 AI에게 물어보세요.</div>');
+    (res.length?res.map(r=>`<a class="res" href="${esc(safeUrl(r.p.url))}" target="_blank" rel="noopener"><div class="rt">${hl(r.p.title)}</div><div class="rd">${esc((r.p.created_time||'').slice(0,10))}${r.p.author?' · '+esc(r.p.author):''} · 일치 ${r.cnt}곳 · 원문 열기 ↗</div><div class="rs">${hl(r.snip)}</div></a>`).join(''):'<div class="empty">찾는 회의록이 없어요.<br>다른 단어로 찾아보거나 오른쪽 AI에이전트에게 물어보세요.</div>');
 }
 
 async function loadPosts(){
@@ -220,7 +220,7 @@ function renderBrief(b){
   const sec=(title,arr,fn,cls='')=>arr&&arr.length?`<div class="sec ${cls}"><h3>${title}</h3>${arr.map(fn).join('')}</div>`:'';
   document.getElementById('brief').innerHTML=`
     <div class="scope">🔐 검색 범위: <b>${esc(BOARDS[board])}</b> 게시판 전체 · 다른 게시판 내용은 사용하지 않습니다</div>
-    <h2>최근 회의 정리</h2><div class="sub">최근 회의 ${Math.min(posts.length,10)}건 기준 · 궁금한 건 오른쪽에 물어보세요 (전체 ${posts.length}건에서 찾아요)</div>
+    <h2>최근 회의 정리</h2><div class="sub">최근 회의 ${Math.min(posts.length,10)}건 기준 · 궁금한 건 오른쪽 AI에이전트에게 물어보세요 (전체 ${posts.length}건에서 찾아요)</div>
     ${b.flow&&b.flow.length?`<div class="sec"><h3>🕒 최근 회의 흐름</h3><div class="timeline">${b.flow.map(f=>`<div><b>${esc(f.date)} ${esc(f.title)}</b>${esc(f.point)} ${refLink(f.ref)}</div>`).join('')}</div></div>`:''}
     ${sec('⏸ 아직 정하지 못한 것',b.open_issues,d=>`<div class="item">${esc(d.text)} ${refLink(d.ref)}</div>`)}
     ${sec('👤 담당자별 할 일 점검',b.action_items,a=>`<div class="item">${statusBadge(a.status)}<b>${esc(a.owner||'담당 미정')}</b> — ${esc(a.task)}${a.due?` <span style="color:var(--faint)">(${esc(a.due)})</span>`:''} ${refLink(a.ref)}</div>`)}

@@ -133,7 +133,7 @@ async function runSync({ deadlineMs = 22000, full = false, analyzeOnly = false }
         board_key: key, board_id: String(b.boardId), post_id: String(p.postId),
         title: p.title, author: p.userName || null,
         created_time: p.createdTime || null, modified_time: p.modifiedTime || p.createdTime || null,
-        url: `https://board.worksmobile.com/main/board/${b.boardId}/post/${p.postId}`,
+        url: `https://board.worksmobile.com/main/article/${p.postId}`,
         synced_at: new Date().toISOString()
       }));
       if (rows.length) {
