@@ -68,18 +68,18 @@ h2{font-size:16px;margin-bottom:4px}
   <div class="card">
     <div class="label">① 회의 게시판</div>
     <div id="boards"></div>
-    <div class="label" style="margin-top:16px">② 프로젝트</div>
-    <div id="projects"><div class="loading">불러오는 중...</div></div>
+    <div class="label" style="margin-top:16px">최근 회의록</div>
+    <div id="projects" class="postlist"><div class="loading">불러오는 중...</div></div>
     <div class="sync" id="sync"></div>
   </div>
 
   <div class="card" id="brief">
-    <div class="empty">왼쪽에서 프로젝트를 고르면<br>지난 회의 흐름·결정사항·미결 사항·할 일을 정리해 드려요.</div>
+    <div class="loading">⏳ 최근 회의 정리 중... (20초쯤 걸려요)</div>
   </div>
 
   <div class="card chat">
     <div class="head">💬 회의 중에 물어보기</div>
-    <div class="msgs" id="msgs"><div class="empty">프로젝트를 고른 뒤 질문하세요.<br>예: "지난번에 단가 얼마로 정했지?"</div></div>
+    <div class="msgs" id="msgs"><div class="empty">게시판 전체 회의록에서 찾아 답해요.<br>예: "샤브20 11월 이벤트 예산 얼마로 정했지?"</div></div>
     <div class="input"><input id="q" placeholder="질문 입력 후 Enter" onkeydown="if(event.key==='Enter')ask()"><button class="btn btn-primary" onclick="ask()">전송</button></div>
   </div>
 </div>
@@ -91,7 +91,7 @@ const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 const BOARDS={all:'전체회의록&미팅록',comm:'커뮤니케이션팀 회의록'};
-let me=null, canComm=false, board='all', project=null, posts=[], refMap={}, projNames=[];
+let me=null, canComm=false, board='all', posts=[], refMap={};
 
 function esc(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(()=>t.style.display='none',2600);}
@@ -108,6 +108,7 @@ async function init(){
   document.getElementById('who').textContent=`${me.name||session.user.email} · 볼 수 있는 회의록 ${canComm?2:1}개`;
   renderBoards();
   await loadPosts();
+  loadBrief();
   if(me.role==='admin') loadSyncState();
 }
 
@@ -120,65 +121,59 @@ function renderBoards(){
 
 async function selectBoard(k){
   if(k==='comm'&&!canComm)return;
-  board=k;project=null;renderBoards();
-  document.getElementById('brief').innerHTML='<div class="empty">왼쪽에서 프로젝트를 고르세요.</div>';
-  document.getElementById('msgs').innerHTML='<div class="empty">프로젝트를 고른 뒤 질문하세요.</div>';
+  if(k===board)return;
+  board=k;renderBoards();
+  document.getElementById('msgs').innerHTML=`<div class="empty">${esc(BOARDS[board])} 전체 회의록에서 찾아 답해요.</div>`;
   await loadPosts();
+  loadBrief();
 }
 
 async function loadPosts(){
   // DB 보안 규칙(RLS)으로 권한 없는 게시판 글은 애초에 내려오지 않음
-  const {data,error}=await sb.from('meeting_posts').select('id,board_key,project,title,created_time,url').eq('board_key',board).order('created_time',{ascending:false}).limit(1000);
+  const {data,error}=await sb.from('meeting_posts').select('id,board_key,title,created_time,url').eq('board_key',board).order('created_time',{ascending:false}).limit(1000);
   if(error){document.getElementById('projects').innerHTML=`<div class="empty">불러오기 실패: ${esc(error.message)}</div>`;return;}
   posts=data||[];
+  refMap={};posts.forEach(p=>refMap[p.id]=p);
   const c=document.getElementById('cnt-'+board); if(c)c.textContent=posts.length+'건';
-  const groups={};
-  posts.forEach(p=>{const k=p.project||'⏳ 분석 대기';(groups[k]=groups[k]||[]).push(p);});
-  const names=Object.keys(groups).sort((a,b)=>(groups[b][0].created_time||'').localeCompare(groups[a][0].created_time||''));
-  projNames=names;
-  document.getElementById('projects').innerHTML=names.length?names.map((n,i)=>`<div class="proj ${project===n?'on':''}" onclick="selectProject(projNames[${i}])">${esc(n)}<span>${groups[n].length}건</span></div>`).join(''):'<div class="empty">아직 가져온 회의록이 없어요.<br>네이버웍스 연동 후 자동으로 채워집니다.</div>';
+  document.getElementById('projects').innerHTML=posts.length?posts.map(p=>`<a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">${esc((p.created_time||'').slice(0,10))} · ${esc(p.title)}</a>`).join(''):'<div class="empty">아직 가져온 회의록이 없어요.<br>네이버웍스에 올리면 자동으로 채워집니다.</div>';
 }
 
-async function selectProject(n){
-  if(n==='⏳ 분석 대기'){toast('AI 분석이 끝나면 프로젝트별로 자동 분류돼요.');return;}
-  project=n;await loadPosts();
-  const list=posts.filter(p=>p.project===n);
-  refMap={};list.forEach(p=>refMap[p.id]=p);
-  document.getElementById('brief').innerHTML=`<div class="scope">🔐 검색 범위: <b>${esc(BOARDS[board])}</b> · ${esc(n)} 회의록 ${list.length}건만 사용합니다</div><h2>${esc(n)} — 회의 브리핑</h2><div class="sub">AI가 지난 회의록을 정리하는 중...</div><div class="loading">⏳ 10~20초 정도 걸려요</div>`;
-  document.getElementById('msgs').innerHTML=`<div class="m ai">"${esc(n)}" 회의록 ${list.length}건 기준으로 답할게요. 궁금한 걸 물어보세요.</div>`;
+let briefSeq=0;
+async function loadBrief(){
+  const seq=++briefSeq, b=board;
+  document.getElementById('brief').innerHTML=`<div class="scope">🔐 검색 범위: <b>${esc(BOARDS[b])}</b> 게시판 전체 · 다른 게시판 내용은 사용하지 않습니다</div><h2>최근 회의 정리</h2><div class="loading">⏳ AI가 최근 회의록을 정리하는 중... (20초쯤 걸려요)</div>`;
+  if(!posts.length){document.getElementById('brief').querySelector('.loading').textContent='아직 회의록이 없어요.';return;}
   try{
-    const res=await fetch('/.netlify/functions/meeting-agent',{method:'POST',headers:await authHeaders(),body:JSON.stringify({action:'brief',board,project:n})});
+    const res=await fetch('/.netlify/functions/meeting-agent',{method:'POST',headers:await authHeaders(),body:JSON.stringify({action:'brief',board:b})});
     const r=await res.json();
     if(!res.ok)throw new Error(r.error||res.status);
-    renderBrief(n,list,r.brief||{});
-  }catch(e){document.getElementById('brief').querySelector('.loading').textContent='브리핑 실패: '+e.message;}
+    if(seq!==briefSeq)return;
+    renderBrief(r.brief||{});
+  }catch(e){if(seq===briefSeq){const l=document.getElementById('brief').querySelector('.loading');if(l)l.textContent='정리 실패: '+e.message;}}
 }
 
 function refLink(id){const p=refMap[id];if(!p)return '';return `<a class="src" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">${esc((p.created_time||'').slice(5,10))} 회의록 ↗</a>`;}
 function statusBadge(s){const m={'완료':'b-done','진행중':'b-wait','기한지남':'b-late'};return `<span class="badge ${m[s]||'b-chk'}">${esc(s||'확인필요')}</span>`;}
 
-function renderBrief(n,list,b){
-  const last=list[0]?(list[0].created_time||'').slice(0,10):'';
+function renderBrief(b){
   const sec=(title,arr,fn,cls='')=>arr&&arr.length?`<div class="sec ${cls}"><h3>${title}</h3>${arr.map(fn).join('')}</div>`:'';
   document.getElementById('brief').innerHTML=`
-    <div class="scope">🔐 검색 범위: <b>${esc(BOARDS[board])}</b> 게시판의 "${esc(n)}" 회의록만 · 다른 게시판 내용은 사용하지 않습니다</div>
-    <h2>${esc(n)} — 회의 브리핑</h2><div class="sub">지난 회의 ${list.length}건 기준 · 최근 회의 ${esc(last)}</div>
-    ${b.flow&&b.flow.length?`<div class="sec"><h3>🕒 지난 회의 흐름</h3><div class="timeline">${b.flow.map(f=>`<div><b>${esc(f.date)} ${esc(f.title)}</b>${esc(f.point)} ${refLink(f.ref)}</div>`).join('')}</div></div>`:''}
-    ${sec('✅ 지금까지 결정된 것',b.decisions,d=>`<div class="item">${esc(d.text)} ${refLink(d.ref)}</div>`)}
+    <div class="scope">🔐 검색 범위: <b>${esc(BOARDS[board])}</b> 게시판 전체 · 다른 게시판 내용은 사용하지 않습니다</div>
+    <h2>최근 회의 정리</h2><div class="sub">최근 회의 ${Math.min(posts.length,10)}건 기준 · 궁금한 건 오른쪽에 물어보세요 (전체 ${posts.length}건에서 찾아요)</div>
+    ${b.flow&&b.flow.length?`<div class="sec"><h3>🕒 최근 회의 흐름</h3><div class="timeline">${b.flow.map(f=>`<div><b>${esc(f.date)} ${esc(f.title)}</b>${esc(f.point)} ${refLink(f.ref)}</div>`).join('')}</div></div>`:''}
     ${sec('⏸ 아직 정하지 못한 것',b.open_issues,d=>`<div class="item">${esc(d.text)} ${refLink(d.ref)}</div>`)}
     ${sec('👤 담당자별 할 일 점검',b.action_items,a=>`<div class="item">${statusBadge(a.status)}<b>${esc(a.owner||'담당 미정')}</b> — ${esc(a.task)}${a.due?` <span style="color:var(--faint)">(${esc(a.due)})</span>`:''} ${refLink(a.ref)}</div>`)}
-    ${sec('📌 오늘 안건 제안',b.agenda,(a,i)=>`<div class="item">${i+1}. ${esc(a)}</div>`,'agenda')}
-    <div class="sec postlist"><h3>📄 원문 회의록 (${list.length})</h3>${list.map(p=>`<a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">${esc((p.created_time||'').slice(0,10))} · ${esc(p.title)}</a>`).join('')}</div>`;
+    ${sec('📌 오늘 안건 제안',b.agenda,(a,i)=>`<div class="item">${i+1}. ${esc(a)}</div>`,'agenda')}`;
 }
 
 async function ask(){
   const q=document.getElementById('q').value.trim();if(!q)return;
-  if(!project){toast('먼저 왼쪽에서 프로젝트를 골라 주세요.');return;}
   const box=document.getElementById('msgs');
-  box.insertAdjacentHTML('beforeend',`<div class="m me">${esc(q)}</div><div class="m ai" id="pending">⏳ 회의록 확인 중...</div>`);
+  const e0=box.querySelector('.empty');if(e0)e0.remove();
+  box.insertAdjacentHTML('beforeend',`<div class="m me">${esc(q)}</div><div class="m ai" id="pending">⏳ 회의록 찾는 중...</div>`);
   document.getElementById('q').value='';box.scrollTop=box.scrollHeight;
   try{
-    const res=await fetch('/.netlify/functions/meeting-agent',{method:'POST',headers:await authHeaders(),body:JSON.stringify({action:'ask',board,project,question:q})});
+    const res=await fetch('/.netlify/functions/meeting-agent',{method:'POST',headers:await authHeaders(),body:JSON.stringify({action:'ask',board,question:q})});
     const r=await res.json();if(!res.ok)throw new Error(r.error||res.status);
     const refs=(r.refs||[]).map(p=>`<a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener">[${esc(BOARDS[board])}] ${esc(p.date)} ${esc(p.title)} ↗</a>`).join('<br>');
     document.getElementById('pending').outerHTML=`<div class="m ai">${esc(r.answer||'')}${refs?`<div class="ref">📄 근거<br>${refs}</div>`:''}</div>`;
